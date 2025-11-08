@@ -1,0 +1,4 @@
+# Frontend Agent - Continue M2 Implementation
+
+Continue M2 implementation by completing the Invoice Detail page (`/invoices/[id]/page.tsx`) and Create Invoice page (`/invoices/new/page.tsx`) following the established MVVM pattern and referencing the Customer Detail/Create pages as templates. The Invoice Detail page should display invoice information with line items, payments, totals, and action buttons (Mark as Sent, Record Payment, Cancel) with RBAC enforcement, while the Create Invoice page needs a multi-line item form with real-time calculation (subtotal, tax, total), customer selection, and payment terms. See `/frontend/FRONTEND_IMPLEMENTATION_SUMMARY.md` for current implementation status and remaining work breakdown, and follow the same patterns used in Customer pages (React Hook Form + Zod validation, useInvoices hook for ViewModel, shadcn/ui components, error handling with RFC 7807 Problem Details format).
+

@@ -1,0 +1,4 @@
+# Frontend Agent M2 - Final Polish & Testing
+
+Complete M2 final polish by enhancing the Customer Portal self-service dashboard (ensure Customer role has dedicated portal view with own invoices list, payment form, credit balance display, and account summary - may already exist in Dashboard page but verify it's customer-specific), perform comprehensive RBAC testing across all pages (verify SysAdmin, Accountant, Sales, and Customer roles see correct UI elements and can access only permitted actions), and verify mobile responsiveness on all pages (especially Customer Portal, Invoice forms, and Dashboard - test on mobile viewport, ensure forms are usable, navigation works, and charts are readable). Reference `/frontend/FRONTEND_AGENT_REPORT.md`, `/frontend/INVOICE_PAGES_COMPLETE.md`, and `/frontend/EXTENDED_FEATURES_COMPLETE.md` for implementation details, and document any RBAC or mobile issues found in a testing report.
+
