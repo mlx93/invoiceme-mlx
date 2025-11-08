@@ -1,0 +1,2436 @@
+openapi: 3.0.3
+info:
+  title: InvoiceMe API
+  description: |
+    Production-quality ERP-style invoicing system API demonstrating Domain-Driven Design (DDD), 
+    Command Query Responsibility Segregation (CQRS), and Vertical Slice Architecture (VSA).
+    
+    **Architecture**:
+    - Commands (Write Operations): Mutate state, publish domain events
+    - Queries (Read Operations): Return read-only data, no side effects
+    
+    **Authentication**: JWT Bearer token in Authorization header (24-hour expiry, no refresh tokens)
+    
+    **Error Format**: RFC 7807 Problem Details
+    
+    **Pagination**: Spring Data JPA Page<T> format
+    
+    **Timezone**: Central Time (America/Chicago) for scheduled jobs
+  version: 1.0.0
+  contact:
+    name: InvoiceMe API Support
+    email: support@invoiceme.com
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+  - url: https://api.invoiceme.com/api/v1
+    description: Production server
+
+tags:
+  - name: Customers
+    description: Customer management (Commands & Queries)
+  - name: Invoices
+    description: Invoice management (Commands & Queries)
+  - name: Payments
+    description: Payment recording (Commands & Queries)
+  - name: Refunds
+    description: Refund processing (Commands & Queries)
+  - name: Recurring Invoices
+    description: Recurring invoice template management (Commands & Queries)
+  - name: Users
+    description: User management and authentication (Commands & Queries)
+  - name: Dashboard
+    description: Dashboard metrics and reports (Queries only)
+  - name: Auth
+    description: Authentication endpoints (Public)
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ============================================================================
+  # CUSTOMER ENDPOINTS
+  # ============================================================================
+  
+  /customers:
+    post:
+      tags:
+        - Customers
+      summary: Create Customer (Command)
+      description: |
+        Creates a new customer. This is a **Command** operation that mutates state.
+        
+        **Roles**: SYSADMIN, ACCOUNTANT, SALES
+      operationId: createCustomer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerRequest'
+      responses:
+        '201':
+          description: Customer created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '400':
+          description: Validation error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '401':
+          description: Unauthorized (invalid or missing token)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '403':
+          description: Forbidden (insufficient permissions)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '500':
+          description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+    
+    get:
+      tags:
+        - Customers
+      summary: List Customers (Query)
+      description: |
+        Lists customers with filtering, sorting, and pagination. This is a **Query** operation (read-only).
+        
+        **Roles**: SYSADMIN, ACCOUNTANT, SALES
+      operationId: listCustomers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: status
+          in: query
+          description: Filter by customer status
+          schema:
+            type: string
+            enum: [ACTIVE, INACTIVE, SUSPENDED]
+        - name: customerType
+          in: query
+          description: Filter by customer type
+          schema:
+            type: string
+            enum: [RESIDENTIAL, COMMERCIAL, INSURANCE]
+        - name: search
+          in: query
+          description: Search by company name or email (partial match)
+          schema:
+            type: string
+        - name: hasOutstandingBalance
+          in: query
+          description: Filter customers with outstanding balance
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Customers retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedCustomerResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /customers/{id}:
+    get:
+      tags:
+        - Customers
+      summary: Get Customer by ID (Query)
+      description: |
+        Retrieves customer details by ID. This is a **Query** operation (read-only).
+        
+        **Roles**: All (filtered by ownership for CUSTOMER role)
+      operationId: getCustomer
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CustomerIdParam'
+      responses:
+        '200':
+          description: Customer retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    
+    put:
+      tags:
+        - Customers
+      summary: Update Customer (Command)
+      description: |
+        Updates customer information. This is a **Command** operation that mutates state.
+        
+        **Roles**: SYSADMIN, ACCOUNTANT
+        
+        **Note**: Credit balance cannot be updated directly (calculated from payments)
+      operationId: updateCustomer
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CustomerIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerRequest'
+      responses:
+        '200':
+          description: Customer updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    
+    delete:
+      tags:
+        - Customers
+      summary: Delete Customer (Command)
+      description: |
+        Soft deletes customer (marks as INACTIVE). This is a **Command** operation that mutates state.
+        
+        **Roles**: SYSADMIN only
+        
+        **Business Rules**: Customer can only be deleted if all invoices are paid and credit balance = $0
+      operationId: deleteCustomer
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CustomerIdParam'
+      responses:
+        '204':
+          description: Customer deleted successfully
+        '400':
+          description: Cannot delete customer (has outstanding balance or active invoices)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ============================================================================
+  # INVOICE ENDPOINTS
+  # ============================================================================
+  
+  /invoices:
+    post:
+      tags:
+        - Invoices
+      summary: Create Invoice (Command)
+      description: |
+        Creates a new invoice in DRAFT status. This is a **Command** operation that mutates state.
+        
+        **Roles**: SYSADMIN, ACCOUNTANT, SALES
+        
+        **Business Rules**: 
+        - Requires at least 1 line item
+        - Invoice number auto-generated (INV-YYYY-####)
+        - Status defaults to DRAFT
+      operationId: createInvoice
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInvoiceRequest'
+      responses:
+        '201':
+          description: Invoice created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    
+    get:
+      tags:
+        - Invoices
+      summary: List Invoices (Query)
+      description: |
+        Lists invoices with filtering, sorting, and pagination. This is a **Query** operation (read-only).
+        
+        **Roles**: All (filtered by ownership for CUSTOMER role)
+      operationId: listInvoices
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: status
+          in: query
+          description: Filter by invoice status (comma-separated for multiple values)
+          schema:
+            type: string
+            example: SENT,OVERDUE
+        - name: customerId
+          in: query
+          description: Filter by customer ID
+          schema:
+            type: string
+            format: uuid
+        - name: issueDateFrom
+          in: query
+          description: Filter by issue date (from)
+          schema:
+            type: string
+            format: date
+        - name: issueDateTo
+          in: query
+          description: Filter by issue date (to)
+          schema:
+            type: string
+            format: date
+        - name: dueDateFrom
+          in: query
+          description: Filter by due date (from)
+          schema:
+            type: string
+            format: date
+        - name: dueDateTo
+          in: query
+          description: Filter by due date (to)
+          schema:
+            type: string
+            format: date
+        - name: amountFrom
+          in: query
+          description: Filter by total amount (from)
+          schema:
+            type: number
+            format: decimal
+        - name: amountTo
+          in: query
+          description: Filter by total amount (to)
+          schema:
+            type: number
+            format: decimal
+        - name: search
+          in: query
+          description: Search by invoice number (exact) or customer name (partial)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invoices retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedInvoiceResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /invoices/{id}:
+    get:
+      tags:
+        - Invoices
+      summary: Get Invoice by ID (Query)
+      description: |
+        Retrieves invoice details by ID including line items and payments. This is a **Query** operation (read-only).
+        
+        **Roles**: All (filtered by ownership for CUSTOMER role)
+      operationId: getInvoice
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/InvoiceIdParam'
+      responses:
+        '200':
+          description: Invoice retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    
+    put:
+      tags:
+        - Invoices
+      summary: Update Invoice (Command)
+      description: |
+        Updates invoice. This is a **Command** operation that mutates state.
+        
+        **Roles**: 
+        - SYSADMIN, ACCOUNTANT, SALES (DRAFT invoices only)
+        - SYSADMIN (SENT invoices - line items only)
+        
+        **Business Rules**:
+        - DRAFT: All fields editable
+        - SENT: Only line items editable (with version tracking)
+        - PAID: No changes allowed
+      operationId: updateInvoice
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/InvoiceIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateInvoiceRequest'
+      responses:
+        '200':
+          description: Invoice updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Optimistic locking conflict (version mismatch)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    
+    delete:
+      tags:
+        - Invoices
+      summary: Cancel Invoice (Command)
+      description: |
+        Cancels invoice (DRAFT/SENT → CANCELLED). This is a **Command** operation that mutates state.
+        
+        **Roles**: SYSADMIN only
+        
+        **Business Rules**: Cannot cancel PAID invoices (must issue refund instead)
+      operationId: cancelInvoice
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/InvoiceIdParam'
+      responses:
+        '204':
+          description: Invoice cancelled successfully
+        '400':
+          description: Cannot cancel invoice (already paid or has payments)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /invoices/{id}/mark-as-sent:
+    patch:
+      tags:
+        - Invoices
+      summary: Mark Invoice as Sent (Command)
+      description: |
+        Marks invoice as sent (DRAFT → SENT). This is a **Command** operation that mutates state.
+        
+        **Roles**: SYSADMIN, ACCOUNTANT, SALES
+        
+        **Business Rules**:
+        - Requires at least 1 line item
+        - Auto-applies customer credit if available
+        - Sends email notification with PDF
+      operationId: markInvoiceAsSent
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/InvoiceIdParam'
+      responses:
+        '200':
+          description: Invoice marked as sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResponse'
+        '400':
+          description: Cannot mark as sent (no line items or invalid status)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /invoices/{id}/pdf:
+    get:
+      tags:
+        - Invoices
+      summary: Generate Invoice PDF (Query)
+      description: |
+        Generates invoice PDF. This is a **Query** operation (read-only, but generates PDF on-demand).
+        
+        **Roles**: All (filtered by ownership for CUSTOMER role)
+        
+        **Note**: PDF is generated on-demand and cached in S3 for subsequent requests
+      operationId: generateInvoicePdf
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/InvoiceIdParam'
+      responses:
+        '200':
+          description: PDF generated successfully
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ============================================================================
+  # PAYMENT ENDPOINTS
+  # ============================================================================
+  
+  /payments:
+    post:
+      tags:
+        - Payments
+      summary: Record Payment (Command)
+      description: |
+        Records a payment against an invoice. This is a **Command** operation that mutates state.
+        
+        **Roles**: SYSADMIN, ACCOUNTANT, CUSTOMER (own invoices only)
+        
+        **Business Rules**:
+        - Amount must be > $0.00
+        - Invoice must be in SENT or OVERDUE status
+        - If payment > invoice balance, excess goes to customer credit
+        - If payment = invoice balance, invoice status changes to PAID
+      operationId: recordPayment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordPaymentRequest'
+      responses:
+        '201':
+          description: Payment recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    
+    get:
+      tags:
+        - Payments
+      summary: List Payments (Query)
+      description: |
+        Lists payments with filtering, sorting, and pagination. This is a **Query** operation (read-only).
+        
+        **Roles**: SYSADMIN, ACCOUNTANT
+      operationId: listPayments
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: invoiceId
+          in: query
+          description: Filter by invoice ID
+          schema:
+            type: string
+            format: uuid
+        - name: customerId
+          in: query
+          description: Filter by customer ID
+          schema:
+            type: string
+            format: uuid
+        - name: paymentDateFrom
+          in: query
+          description: Filter by payment date (from)
+          schema:
+            type: string
+            format: date
+        - name: paymentDateTo
+          in: query
+          description: Filter by payment date (to)
+          schema:
+            type: string
+            format: date
+        - name: paymentMethod
+          in: query
+          description: Filter by payment method
+          schema:
+            type: string
+            enum: [CREDIT_CARD, ACH]
+        - name: status
+          in: query
+          description: Filter by payment status
+          schema:
+            type: string
+            enum: [PENDING, COMPLETED, FAILED, REFUNDED]
+      responses:
+        '200':
+          description: Payments retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedPaymentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /payments/{id}:
+    get:
+      tags:
+        - Payments
+      summary: Get Payment by ID (Query)
+      description: |
+        Retrieves payment details by ID. This is a **Query** operation (read-only).
+        
+        **Roles**: SYSADMIN, ACCOUNTANT
+      operationId: getPayment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Payment ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payment retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ============================================================================
+  # REFUND ENDPOINTS
+  # ============================================================================
+  
+  /refunds:
+    post:
+      tags:
+        - Refunds
+      summary: Issue Refund (Command)
+      description: |
+        Issues a refund on a paid invoice. This is a **Command** operation that mutates state.
+        
+        **Roles**: SYSADMIN only
+        
+        **Business Rules**:
+        - Invoice must be PAID
+        - Refund amount cannot exceed amount paid
+        - If partial refund, invoice status changes from PAID → SENT
+        - Option to apply refund as customer credit OR process external refund
+      operationId: issueRefund
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueRefundRequest'
+      responses:
+        '201':
+          description: Refund issued successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    
+    get:
+      tags:
+        - Refunds
+      summary: List Refunds (Query)
+      description: |
+        Lists refunds with filtering, sorting, and pagination. This is a **Query** operation (read-only).
+        
+        **Roles**: SYSADMIN
+      operationId: listRefunds
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: invoiceId
+          in: query
+          description: Filter by invoice ID
+          schema:
+            type: string
+            format: uuid
+        - name: customerId
+          in: query
+          description: Filter by customer ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Refunds retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedRefundResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ============================================================================
+  # RECURRING INVOICE ENDPOINTS
+  # ============================================================================
+  
+  /recurring-invoices:
+    post:
+      tags:
+        - Recurring Invoices
+      summary: Create Recurring Invoice Template (Command)
+      description: |
+        Creates a recurring invoice template. This is a **Command** operation that mutates state.
+        
+        **Roles**: SYSADMIN, ACCOUNTANT
+        
+        **Business Rules**:
+        - Requires at least 1 template line item
+        - Calculates next invoice date based on frequency
+        - Status defaults to ACTIVE
+      operationId: createRecurringInvoiceTemplate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTemplateRequest'
+      responses:
+        '201':
+          description: Template created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    
+    get:
+      tags:
+        - Recurring Invoices
+      summary: List Recurring Invoice Templates (Query)
+      description: |
+        Lists recurring invoice templates with filtering, sorting, and pagination. This is a **Query** operation (read-only).
+        
+        **Roles**: SYSADMIN, ACCOUNTANT
+      operationId: listRecurringInvoiceTemplates
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: customerId
+          in: query
+          description: Filter by customer ID
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Filter by template status
+          schema:
+            type: string
+            enum: [ACTIVE, PAUSED, COMPLETED]
+      responses:
+        '200':
+          description: Templates retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedTemplateResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /recurring-invoices/{id}:
+    get:
+      tags:
+        - Recurring Invoices
+      summary: Get Recurring Invoice Template by ID (Query)
+      description: |
+        Retrieves recurring invoice template details by ID. This is a **Query** operation (read-only).
+        
+        **Roles**: SYSADMIN, ACCOUNTANT
+      operationId: getRecurringInvoiceTemplate
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Template retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    
+    patch:
+      tags:
+        - Recurring Invoices
+      summary: Pause Recurring Invoice Template (Command)
+      description: |
+        Pauses template (stops auto-generation). This is a **Command** operation that mutates state.
+        
+        **Roles**: SYSADMIN, ACCOUNTANT
+      operationId: pauseTemplate
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Template paused successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateResponse'
+        '400':
+          description: Cannot pause template (already paused or completed)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /recurring-invoices/{id}/resume:
+    patch:
+      tags:
+        - Recurring Invoices
+      summary: Resume Recurring Invoice Template (Command)
+      description: |
+        Resumes template (restarts auto-generation). This is a **Command** operation that mutates state.
+        
+        **Roles**: SYSADMIN, ACCOUNTANT
+      operationId: resumeTemplate
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Template resumed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateResponse'
+        '400':
+          description: Cannot resume template (not paused or completed)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /recurring-invoices/{id}/complete:
+    patch:
+      tags:
+        - Recurring Invoices
+      summary: Complete Recurring Invoice Template (Command)
+      description: |
+        Completes template (stops all future generation). This is a **Command** operation that mutates state.
+        
+        **Roles**: SYSADMIN, ACCOUNTANT
+        
+        **Business Rules**: Cannot reactivate (COMPLETED is terminal state)
+      operationId: completeTemplate
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Template completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateResponse'
+        '400':
+          description: Cannot complete template (already completed)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ============================================================================
+  # USER & AUTH ENDPOINTS
+  # ============================================================================
+  
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register User (Command)
+      description: |
+        Registers a new user account. This is a **Command** operation that mutates state.
+        
+        **Roles**: Public (no authentication required)
+        
+        **Business Rules**:
+        - Account created with Status = PENDING
+        - SysAdmin receives notification for approval
+        - If Customer role and email matches existing Customer entity, auto-links customer_id
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already exists
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login (Command)
+      description: |
+        Authenticates user and returns JWT token. This is a **Command** operation (mutates login state).
+        
+        **Roles**: Public (no authentication required)
+        
+        **Business Rules**:
+        - Failed login attempts tracked (5 attempts = 1-hour lockout)
+        - Token expiry: 24 hours (no refresh tokens)
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Invalid credentials or account locked
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Logout (Command)
+      description: |
+        Logs out user (invalidates token on client side). This is a **Command** operation.
+        
+        **Roles**: All authenticated users
+        
+        **Note**: Token invalidation handled on client side (no server-side token revocation)
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Logout successful
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Auth
+      summary: Request Password Reset (Command)
+      description: |
+        Requests password reset (sends email with reset link). This is a **Command** operation.
+        
+        **Roles**: Public (no authentication required)
+        
+        **Business Rules**: Reset link expires in 1 hour
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '204':
+          description: Password reset email sent (if email exists)
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Auth
+      summary: Reset Password (Command)
+      description: |
+        Resets password using reset token. This is a **Command** operation.
+        
+        **Roles**: Public (no authentication required)
+        
+        **Business Rules**:
+        - Token must be valid and not expired
+        - Token can only be used once
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '204':
+          description: Password reset successful
+        '400':
+          description: Invalid or expired token
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/pending:
+    get:
+      tags:
+        - Users
+      summary: Get Pending Users (Query)
+      description: |
+        Lists users with PENDING status awaiting approval. This is a **Query** operation (read-only).
+        
+        **Roles**: SYSADMIN only
+      operationId: getPendingUsers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Pending users retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingUserListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{id}/approve:
+    patch:
+      tags:
+        - Users
+      summary: Approve User (Command)
+      description: |
+        Approves pending user account. This is a **Command** operation that mutates state.
+        
+        **Roles**: SYSADMIN only
+        
+        **Business Rules**: Sends approval email to user
+      operationId: approveUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User approved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: User is not pending
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{id}/reject:
+    patch:
+      tags:
+        - Users
+      summary: Reject User (Command)
+      description: |
+        Rejects pending user account. This is a **Command** operation that mutates state.
+        
+        **Roles**: SYSADMIN only
+        
+        **Business Rules**: Sends rejection email to user
+      operationId: rejectUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: User rejected successfully
+        '400':
+          description: User is not pending
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ============================================================================
+  # DASHBOARD ENDPOINTS (Queries Only)
+  # ============================================================================
+  
+  /dashboard/metrics:
+    get:
+      tags:
+        - Dashboard
+      summary: Get Dashboard Metrics (Query)
+      description: |
+        Retrieves key dashboard metrics. This is a **Query** operation (read-only).
+        
+        **Roles**: SYSADMIN, ACCOUNTANT
+      operationId: getDashboardMetrics
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardMetricsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /dashboard/revenue-trend:
+    get:
+      tags:
+        - Dashboard
+      summary: Get Revenue Trend (Query)
+      description: |
+        Retrieves revenue trend data (12 months). This is a **Query** operation (read-only).
+        
+        **Roles**: SYSADMIN, ACCOUNTANT
+      operationId: getRevenueTrend
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: months
+          in: query
+          description: Number of months to retrieve (default: 12)
+          schema:
+            type: integer
+            default: 12
+            minimum: 1
+            maximum: 24
+      responses:
+        '200':
+          description: Revenue trend retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevenueTrendResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /dashboard/invoice-status:
+    get:
+      tags:
+        - Dashboard
+      summary: Get Invoice Status Breakdown (Query)
+      description: |
+        Retrieves invoice status breakdown (pie chart data). This is a **Query** operation (read-only).
+        
+        **Roles**: SYSADMIN, ACCOUNTANT
+      operationId: getInvoiceStatusBreakdown
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Invoice status breakdown retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /dashboard/aging-report:
+    get:
+      tags:
+        - Dashboard
+      summary: Get Aging Report (Query)
+      description: |
+        Retrieves aging report (0-30, 31-60, 61-90, 90+ days). This is a **Query** operation (read-only).
+        
+        **Roles**: SYSADMIN, ACCOUNTANT
+      operationId: getAgingReport
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Aging report retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgingReportResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token with 24-hour expiry (no refresh tokens)
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Page number (0-indexed)
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+    
+    SizeParam:
+      name: size
+      in: query
+      description: Page size
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+    
+    SortParam:
+      name: sort
+      in: query
+      description: Sort criteria (comma-separated, e.g., "createdAt,desc")
+      schema:
+        type: string
+        example: createdAt,desc
+    
+    CustomerIdParam:
+      name: id
+      in: path
+      required: true
+      description: Customer ID
+      schema:
+        type: string
+        format: uuid
+    
+    InvoiceIdParam:
+      name: id
+      in: path
+      required: true
+      description: Invoice ID
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Bad request (validation error)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    
+    Unauthorized:
+      description: Unauthorized (invalid or missing token)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    
+    Forbidden:
+      description: Forbidden (insufficient permissions)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+
+  schemas:
+    # ============================================================================
+    # COMMON SCHEMAS
+    # ============================================================================
+    
+    ProblemDetail:
+      type: object
+      description: RFC 7807 Problem Details format
+      required:
+        - type
+        - title
+        - status
+        - detail
+        - instance
+      properties:
+        type:
+          type: string
+          format: uri
+          description: Problem type URI
+          example: https://invoiceme.com/errors/validation-error
+        title:
+          type: string
+          description: Short, human-readable summary
+          example: Validation Error
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        detail:
+          type: string
+          description: Human-readable explanation
+          example: Email is required
+        instance:
+          type: string
+          format: uri
+          description: URI reference that identifies the specific occurrence
+          example: /api/v1/customers
+        errors:
+          type: array
+          description: Field-level validation errors
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: email
+              message:
+                type: string
+                example: Email is required
+    
+    Page:
+      type: object
+      description: Spring Data JPA Page<T> format
+      required:
+        - content
+        - page
+        - size
+        - totalElements
+        - totalPages
+        - first
+        - last
+      properties:
+        content:
+          type: array
+          description: Page content
+        page:
+          type: integer
+          description: Current page number (0-indexed)
+          example: 0
+        size:
+          type: integer
+          description: Page size
+          example: 20
+        totalElements:
+          type: integer
+          description: Total number of elements
+          example: 150
+        totalPages:
+          type: integer
+          description: Total number of pages
+          example: 8
+        first:
+          type: boolean
+          description: Is first page
+          example: true
+        last:
+          type: boolean
+          description: Is last page
+          example: false
+    
+    Money:
+      type: object
+      description: Monetary value with currency
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: number
+          format: decimal
+          description: Amount (precision: 2 decimal places, rounded HALF_UP)
+          example: 1000.50
+        currency:
+          type: string
+          description: Currency code (ISO 4217)
+          default: USD
+          example: USD
+    
+    Address:
+      type: object
+      description: Address value object
+      properties:
+        street:
+          type: string
+          example: 123 Main St
+        city:
+          type: string
+          example: Austin
+        state:
+          type: string
+          example: TX
+        zipCode:
+          type: string
+          example: "78701"
+        country:
+          type: string
+          default: USA
+          example: USA
+    
+    # ============================================================================
+    # CUSTOMER SCHEMAS
+    # ============================================================================
+    
+    CreateCustomerRequest:
+      type: object
+      required:
+        - companyName
+        - email
+        - customerType
+      properties:
+        companyName:
+          type: string
+          maxLength: 255
+          example: FloodShield Restoration Services
+        contactName:
+          type: string
+          maxLength: 255
+          example: John Smith
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: john@floodshield.com
+        phone:
+          type: string
+          maxLength: 50
+          example: "+1-512-555-1234"
+        address:
+          $ref: '#/components/schemas/Address'
+        customerType:
+          type: string
+          enum: [RESIDENTIAL, COMMERCIAL, INSURANCE]
+          example: COMMERCIAL
+    
+    UpdateCustomerRequest:
+      type: object
+      properties:
+        companyName:
+          type: string
+          maxLength: 255
+        contactName:
+          type: string
+          maxLength: 255
+        phone:
+          type: string
+          maxLength: 50
+        address:
+          $ref: '#/components/schemas/Address'
+        customerType:
+          type: string
+          enum: [RESIDENTIAL, COMMERCIAL, INSURANCE]
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE, SUSPENDED]
+    
+    CustomerResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        companyName:
+          type: string
+        contactName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
+        customerType:
+          type: string
+        creditBalance:
+          $ref: '#/components/schemas/Money'
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    
+    CustomerDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/CustomerResponse'
+        - type: object
+          properties:
+            outstandingBalance:
+              $ref: '#/components/schemas/Money'
+            totalInvoices:
+              type: integer
+            unpaidInvoices:
+              type: integer
+    
+    PagedCustomerResponse:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/CustomerResponse'
+    
+    # ============================================================================
+    # INVOICE SCHEMAS
+    # ============================================================================
+    
+    LineItemDTO:
+      type: object
+      required:
+        - description
+        - quantity
+        - unitPrice
+        - discountType
+        - taxRate
+      properties:
+        description:
+          type: string
+          maxLength: 500
+          example: Water Extraction Service
+        quantity:
+          type: integer
+          minimum: 1
+          example: 1
+        unitPrice:
+          type: number
+          format: decimal
+          minimum: 0
+          example: 500.00
+        discountType:
+          type: string
+          enum: [NONE, PERCENTAGE, FIXED]
+          default: NONE
+        discountValue:
+          type: number
+          format: decimal
+          minimum: 0
+          example: 0
+        taxRate:
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 100
+          example: 8.25
+    
+    CreateInvoiceRequest:
+      type: object
+      required:
+        - customerId
+        - issueDate
+        - paymentTerms
+        - lineItems
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        issueDate:
+          type: string
+          format: date
+        dueDate:
+          type: string
+          format: date
+          description: Optional, required for CUSTOM payment terms
+        paymentTerms:
+          type: string
+          enum: [NET_30, DUE_ON_RECEIPT, CUSTOM]
+        lineItems:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/LineItemDTO'
+        notes:
+          type: string
+    
+    UpdateInvoiceRequest:
+      type: object
+      properties:
+        issueDate:
+          type: string
+          format: date
+        dueDate:
+          type: string
+          format: date
+        paymentTerms:
+          type: string
+          enum: [NET_30, DUE_ON_RECEIPT, CUSTOM]
+        lineItems:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/LineItemDTO'
+        notes:
+          type: string
+        version:
+          type: integer
+          description: Optimistic locking version
+    
+    LineItemResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        description:
+          type: string
+        quantity:
+          type: integer
+        unitPrice:
+          $ref: '#/components/schemas/Money'
+        discountType:
+          type: string
+        discountValue:
+          $ref: '#/components/schemas/Money'
+        taxRate:
+          type: number
+        lineTotal:
+          $ref: '#/components/schemas/Money'
+        sortOrder:
+          type: integer
+    
+    PaymentSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          $ref: '#/components/schemas/Money'
+        paymentMethod:
+          type: string
+        paymentDate:
+          type: string
+          format: date
+        status:
+          type: string
+    
+    InvoiceResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        invoiceNumber:
+          type: string
+        customerId:
+          type: string
+          format: uuid
+        customerName:
+          type: string
+        issueDate:
+          type: string
+          format: date
+        dueDate:
+          type: string
+          format: date
+        status:
+          type: string
+        totalAmount:
+          $ref: '#/components/schemas/Money'
+        amountPaid:
+          $ref: '#/components/schemas/Money'
+        balanceDue:
+          $ref: '#/components/schemas/Money'
+        createdAt:
+          type: string
+          format: date-time
+    
+    InvoiceDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/InvoiceResponse'
+        - type: object
+          properties:
+            paymentTerms:
+              type: string
+            lineItems:
+              type: array
+              items:
+                $ref: '#/components/schemas/LineItemResponse'
+            subtotal:
+              $ref: '#/components/schemas/Money'
+            taxAmount:
+              $ref: '#/components/schemas/Money'
+            discountAmount:
+              $ref: '#/components/schemas/Money'
+            notes:
+              type: string
+            sentDate:
+              type: string
+              format: date-time
+            paidDate:
+              type: string
+              format: date-time
+            payments:
+              type: array
+              items:
+                $ref: '#/components/schemas/PaymentSummary'
+            pdfUrl:
+              type: string
+              format: uri
+              description: Signed URL to PDF (expires in 1 hour)
+    
+    PagedInvoiceResponse:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/InvoiceResponse'
+    
+    # ============================================================================
+    # PAYMENT SCHEMAS
+    # ============================================================================
+    
+    RecordPaymentRequest:
+      type: object
+      required:
+        - invoiceId
+        - amount
+        - paymentMethod
+        - paymentDate
+      properties:
+        invoiceId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: decimal
+          minimum: 0
+          exclusiveMinimum: true
+          example: 1000.00
+        paymentMethod:
+          type: string
+          enum: [CREDIT_CARD, ACH]
+        paymentDate:
+          type: string
+          format: date
+        paymentReference:
+          type: string
+          maxLength: 100
+          example: VISA-4532
+        notes:
+          type: string
+    
+    PaymentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        invoiceId:
+          type: string
+          format: uuid
+        invoiceNumber:
+          type: string
+        customerId:
+          type: string
+          format: uuid
+        customerName:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Money'
+        paymentMethod:
+          type: string
+        paymentDate:
+          type: string
+          format: date
+        paymentReference:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    
+    PaymentDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaymentResponse'
+        - type: object
+          properties:
+            notes:
+              type: string
+            createdByUserId:
+              type: string
+              format: uuid
+            createdByName:
+              type: string
+    
+    PagedPaymentResponse:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/PaymentResponse'
+    
+    # ============================================================================
+    # REFUND SCHEMAS
+    # ============================================================================
+    
+    IssueRefundRequest:
+      type: object
+      required:
+        - invoiceId
+        - amount
+        - reason
+      properties:
+        invoiceId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: decimal
+          minimum: 0
+          exclusiveMinimum: true
+        reason:
+          type: string
+          maxLength: 500
+        applyAsCredit:
+          type: boolean
+          default: false
+          description: If true, refund applied as customer credit instead of external refund
+    
+    RefundResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        invoiceId:
+          type: string
+          format: uuid
+        invoiceNumber:
+          type: string
+        customerId:
+          type: string
+          format: uuid
+        amount:
+          $ref: '#/components/schemas/Money'
+        reason:
+          type: string
+        applyAsCredit:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    
+    PagedRefundResponse:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/RefundResponse'
+    
+    # ============================================================================
+    # RECURRING INVOICE SCHEMAS
+    # ============================================================================
+    
+    TemplateLineItemDTO:
+      type: object
+      required:
+        - description
+        - quantity
+        - unitPrice
+        - discountType
+        - taxRate
+      properties:
+        description:
+          type: string
+          maxLength: 500
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+          format: decimal
+          minimum: 0
+        discountType:
+          type: string
+          enum: [NONE, PERCENTAGE, FIXED]
+        discountValue:
+          type: number
+          format: decimal
+          minimum: 0
+        taxRate:
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 100
+    
+    CreateTemplateRequest:
+      type: object
+      required:
+        - customerId
+        - templateName
+        - frequency
+        - startDate
+        - paymentTerms
+        - lineItems
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        templateName:
+          type: string
+          maxLength: 255
+        frequency:
+          type: string
+          enum: [MONTHLY, QUARTERLY, ANNUALLY]
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        paymentTerms:
+          type: string
+          enum: [NET_30, DUE_ON_RECEIPT, CUSTOM]
+        autoSend:
+          type: boolean
+          default: false
+        lineItems:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/TemplateLineItemDTO'
+    
+    TemplateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        customerName:
+          type: string
+        templateName:
+          type: string
+        frequency:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        nextInvoiceDate:
+          type: string
+          format: date
+        status:
+          type: string
+        autoSend:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    
+    TemplateDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/TemplateResponse'
+        - type: object
+          properties:
+            paymentTerms:
+              type: string
+            lineItems:
+              type: array
+              items:
+                $ref: '#/components/schemas/TemplateLineItemDTO'
+    
+    PagedTemplateResponse:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/TemplateResponse'
+    
+    # ============================================================================
+    # USER & AUTH SCHEMAS
+    # ============================================================================
+    
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - fullName
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+        fullName:
+          type: string
+        role:
+          type: string
+          enum: [SYSADMIN, ACCOUNTANT, SALES, CUSTOMER]
+    
+    RegisterResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        fullName:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+          example: PENDING
+    
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    
+    LoginResponse:
+      type: object
+      required:
+        - token
+        - user
+      properties:
+        token:
+          type: string
+          description: JWT token (24-hour expiry, no refresh tokens)
+        user:
+          $ref: '#/components/schemas/UserResponse'
+    
+    ForgotPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+    
+    ResetPasswordRequest:
+      type: object
+      required:
+        - token
+        - newPassword
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+    
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        fullName:
+          type: string
+        role:
+          type: string
+        customerId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    
+    PendingUserListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/UserResponse'
+    
+    # ============================================================================
+    # DASHBOARD SCHEMAS
+    # ============================================================================
+    
+    DashboardMetricsResponse:
+      type: object
+      properties:
+        totalRevenueMTD:
+          $ref: '#/components/schemas/Money'
+        outstandingInvoicesCount:
+          type: integer
+        outstandingInvoicesAmount:
+          $ref: '#/components/schemas/Money'
+        overdueInvoicesCount:
+          type: integer
+        overdueInvoicesAmount:
+          $ref: '#/components/schemas/Money'
+        activeCustomers:
+          type: integer
+    
+    RevenueTrendData:
+      type: object
+      properties:
+        month:
+          type: string
+          format: date
+          example: "2025-01"
+        revenue:
+          $ref: '#/components/schemas/Money'
+    
+    RevenueTrendResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RevenueTrendData'
+    
+    InvoiceStatusData:
+      type: object
+      properties:
+        status:
+          type: string
+        count:
+          type: integer
+        amount:
+          $ref: '#/components/schemas/Money'
+    
+    InvoiceStatusResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceStatusData'
+    
+    AgingReportData:
+      type: object
+      properties:
+        bucket:
+          type: string
+          enum: [0-30, 31-60, 61-90, 90+]
+        count:
+          type: integer
+        amount:
+          $ref: '#/components/schemas/Money'
+    
+    AgingReportResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgingReportData'
+
