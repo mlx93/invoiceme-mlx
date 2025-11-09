@@ -156,8 +156,7 @@ export default function InvoiceDetailPage() {
                   <DialogHeader>
                     <DialogTitle>Mark Invoice as Sent</DialogTitle>
                     <DialogDescription>
-                      This will change the invoice status from DRAFT to SENT and send an email
-                      notification to the customer. Are you sure?
+                      This will change the invoice status from DRAFT to SENT. Are you sure?
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>

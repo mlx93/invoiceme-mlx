@@ -165,8 +165,7 @@ export default function PendingUsersPage() {
                                 <DialogTitle>Approve User</DialogTitle>
                                 <DialogDescription>
                                   Are you sure you want to approve {pendingUser.fullName} (
-                                  {pendingUser.email}) as {pendingUser.role}? They will receive an
-                                  email notification and can log in immediately.
+                                  {pendingUser.email}) as {pendingUser.role}? They will be able to log in immediately.
                                 </DialogDescription>
                               </DialogHeader>
                               <DialogFooter>
@@ -204,8 +203,7 @@ export default function PendingUsersPage() {
                                 <DialogTitle>Reject User</DialogTitle>
                                 <DialogDescription>
                                   Are you sure you want to reject {pendingUser.fullName} (
-                                  {pendingUser.email})? They will receive an email notification and
-                                  will not be able to log in. This action cannot be undone.
+                                  {pendingUser.email})? They will not be able to log in. This action cannot be undone.
                                 </DialogDescription>
                               </DialogHeader>
                               <DialogFooter>
