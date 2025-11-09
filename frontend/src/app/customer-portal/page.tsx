@@ -244,10 +244,9 @@ export default function CustomerPortalPage() {
         <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Record Payment</DialogTitle>
+              <DialogTitle>Pay Invoice</DialogTitle>
               <DialogDescription>
-                Record a payment for your invoice. Balance due:{' '}
-                {formatCurrency(selectedBalanceDue)}
+                Pay your invoice. Balance due: {formatCurrency(selectedBalanceDue)}
               </DialogDescription>
             </DialogHeader>
             {selectedInvoiceId && (
@@ -255,6 +254,7 @@ export default function CustomerPortalPage() {
                 invoiceId={selectedInvoiceId}
                 balanceDue={selectedBalanceDue}
                 onSuccess={handlePaymentRecorded}
+                userRole="CUSTOMER"
               />
             )}
           </DialogContent>

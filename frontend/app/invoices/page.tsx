@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { LoadingModal } from '@/components/ui/loading-modal';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useAuth } from '@/contexts/AuthContext';
 import { canCreateInvoice } from '@/lib/rbac';
@@ -30,7 +31,11 @@ function InvoicesPageContent() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [search, setSearch] = useState('');
 
-  const customerId = searchParams.get('customerId') || undefined;
+  // For CUSTOMER role, always filter by their customerId
+  // For other roles, use customerId from query params if provided
+  const customerId = user?.role === 'CUSTOMER' 
+    ? user.customerId 
+    : (searchParams.get('customerId') || undefined);
 
   const { invoices, loading, error, pagination } = useInvoices({
     page,
@@ -71,6 +76,7 @@ function InvoicesPageContent() {
 
   return (
     <Layout>
+      <LoadingModal isLoading={loading} />
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Invoices</h1>
@@ -131,21 +137,32 @@ function InvoicesPageContent() {
                     <TableHead>Status</TableHead>
                     <TableHead>Total Amount</TableHead>
                     <TableHead>Balance Due</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {invoices.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                         No invoices found
                       </TableCell>
                     </TableRow>
                   ) : (
                     invoices.map((invoice) => (
-                      <TableRow key={invoice.id}>
+                <TableRow
+                  key={invoice.id}
+                  className="cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => router.push(`/invoices/${invoice.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      router.push(`/invoices/${invoice.id}`);
+                    }
+                  }}
+                >
                         <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                        <TableCell>{invoice.customerName}</TableCell>
+                        <TableCell className="font-medium">{invoice.customerName}</TableCell>
                         <TableCell>{formatDate(invoice.issueDate)}</TableCell>
                         <TableCell>{formatDate(invoice.dueDate)}</TableCell>
                         <TableCell>
@@ -156,13 +173,6 @@ function InvoicesPageContent() {
                         <TableCell>{formatCurrency(invoice.totalAmount.amount)}</TableCell>
                         <TableCell className={invoice.balanceDue.amount > 0 ? 'text-red-600 font-medium' : ''}>
                           {formatCurrency(invoice.balanceDue.amount)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Link href={`/invoices/${invoice.id}`}>
-                            <Button variant="ghost" size="sm">
-                              View
-                            </Button>
-                          </Link>
                         </TableCell>
                       </TableRow>
                     ))

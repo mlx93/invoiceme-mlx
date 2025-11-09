@@ -1,6 +1,8 @@
 package com.invoiceme.invoices;
 
 import com.invoiceme.domain.common.InvoiceStatus;
+import com.invoiceme.domain.customer.Customer;
+import com.invoiceme.infrastructure.persistence.CustomerRepository;
 import com.invoiceme.invoices.cancelinvoice.CancelInvoiceCommand;
 import com.invoiceme.invoices.cancelinvoice.CancelInvoiceHandler;
 import com.invoiceme.invoices.createinvoice.*;
@@ -54,6 +56,9 @@ public class InvoiceController {
     // Cancel Invoice
     private final CancelInvoiceHandler cancelHandler;
     
+    // Customer Repository for fetching customer names
+    private final CustomerRepository customerRepository;
+    
     @PostMapping
     @PreAuthorize("hasAnyRole('SYSADMIN', 'ACCOUNTANT', 'SALES')")
     public ResponseEntity<InvoiceDto> createInvoice(@Valid @RequestBody CreateInvoiceRequest request) {
@@ -61,6 +66,13 @@ public class InvoiceController {
         CreateInvoiceCommand command = createMapper.requestToCommand(request);
         var invoice = createHandler.handle(command);
         InvoiceDto response = createMapper.toDto(invoice);
+        
+        // Populate customer name
+        String customerName = customerRepository.findById(invoice.getCustomerId())
+            .map(Customer::getCompanyName)
+            .orElse("Unknown Customer");
+        response.setCustomerName(customerName);
+        
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
     
@@ -69,11 +81,16 @@ public class InvoiceController {
         GetInvoiceQuery query = new GetInvoiceQuery(id);
         InvoiceDetailResult result = getHandler.handle(query);
         
+        // Fetch customer name
+        String customerName = customerRepository.findById(result.getInvoice().getCustomerId())
+            .map(Customer::getCompanyName)
+            .orElse("Unknown Customer");
+        
         InvoiceDetailResponse response = InvoiceDetailResponse.builder()
             .id(result.getInvoice().getId())
             .invoiceNumber(result.getInvoice().getInvoiceNumber().toString())
             .customerId(result.getInvoice().getCustomerId())
-            .customerName(null) // Will be populated from customer lookup if needed
+            .customerName(customerName)
             .issueDate(result.getInvoice().getIssueDate())
             .dueDate(result.getInvoice().getDueDate())
             .status(result.getInvoice().getStatus().name())
@@ -152,6 +169,15 @@ public class InvoiceController {
         
         Page<com.invoiceme.domain.invoice.Invoice> invoicePage = listHandler.handle(query);
         
+        // Batch load customer names for performance
+        List<UUID> customerIds = invoicePage.getContent().stream()
+            .map(com.invoiceme.domain.invoice.Invoice::getCustomerId)
+            .distinct()
+            .collect(Collectors.toList());
+        
+        java.util.Map<UUID, String> customerNameMap = customerRepository.findAllById(customerIds).stream()
+            .collect(Collectors.toMap(Customer::getId, Customer::getCompanyName));
+        
         PagedInvoiceResponse response = PagedInvoiceResponse.builder()
             .content(invoicePage.getContent().stream()
                 .map(invoice -> {
@@ -159,7 +185,7 @@ public class InvoiceController {
                     dto.setId(invoice.getId());
                     dto.setInvoiceNumber(invoice.getInvoiceNumber().toString());
                     dto.setCustomerId(invoice.getCustomerId());
-                    dto.setCustomerName(null); // Will be populated from customer lookup if needed
+                    dto.setCustomerName(customerNameMap.getOrDefault(invoice.getCustomerId(), "Unknown Customer"));
                     dto.setIssueDate(invoice.getIssueDate());
                     dto.setDueDate(invoice.getDueDate());
                     dto.setStatus(invoice.getStatus());
@@ -191,6 +217,13 @@ public class InvoiceController {
         UpdateInvoiceCommand command = updateMapper.toCommand(id, request);
         var invoice = updateHandler.handle(command);
         InvoiceDto response = updateMapper.toDto(invoice);
+        
+        // Populate customer name
+        String customerName = customerRepository.findById(invoice.getCustomerId())
+            .map(Customer::getCompanyName)
+            .orElse("Unknown Customer");
+        response.setCustomerName(customerName);
+        
         return ResponseEntity.ok(response);
     }
     
@@ -200,6 +233,13 @@ public class InvoiceController {
         MarkAsSentCommand command = new MarkAsSentCommand(id);
         var invoice = markAsSentHandler.handle(command);
         InvoiceDto response = markAsSentMapper.toDto(invoice);
+        
+        // Populate customer name
+        String customerName = customerRepository.findById(invoice.getCustomerId())
+            .map(Customer::getCompanyName)
+            .orElse("Unknown Customer");
+        response.setCustomerName(customerName);
+        
         return ResponseEntity.ok(response);
     }
     

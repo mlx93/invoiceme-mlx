@@ -25,6 +25,14 @@ public interface CreateCustomerMapper {
         if (dto == null) {
             return null;
         }
+        // Only create Address if all required fields are present and non-empty
+        // Address is optional - if fields are incomplete, return null
+        if (dto.getStreet() == null || dto.getStreet().trim().isEmpty() ||
+            dto.getCity() == null || dto.getCity().trim().isEmpty() ||
+            dto.getState() == null || dto.getState().trim().isEmpty() ||
+            dto.getZipCode() == null || dto.getZipCode().trim().isEmpty()) {
+            return null;
+        }
         if (dto.getCountry() != null) {
             return Address.of(dto.getStreet(), dto.getCity(), dto.getState(), dto.getZipCode(), dto.getCountry());
         }

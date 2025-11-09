@@ -75,6 +75,18 @@ public class User {
         return user;
     }
     
+    // Factory method for creating active users (e.g., when admin creates customer)
+    public static User createActive(String email, String passwordHash, String fullName, UserRole role, UUID customerId) {
+        User user = new User();
+        user.email = email;
+        user.passwordHash = passwordHash;
+        user.fullName = fullName;
+        user.role = role;
+        user.status = UserStatus.ACTIVE;
+        user.customerId = customerId;
+        return user;
+    }
+    
     // Methods to change status
     public void approve() {
         if (this.status != UserStatus.PENDING) {

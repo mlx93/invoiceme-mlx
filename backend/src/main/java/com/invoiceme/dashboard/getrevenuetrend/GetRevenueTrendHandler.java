@@ -45,37 +45,48 @@ public class GetRevenueTrendHandler {
         List<RevenueTrendResponse.RevenueTrendData> data = new ArrayList<>();
         
         if ("MONTHLY".equals(period)) {
-            // Group by month
+            // Group by month using paidDate (when revenue was actually received)
             Map<String, List<Invoice>> byMonth = invoices.stream()
+                .filter(invoice -> invoice.getPaidDate() != null) // Only include invoices with paid date
                 .collect(Collectors.groupingBy(
-                    invoice -> invoice.getIssueDate().withDayOfMonth(1).toString()
+                    invoice -> {
+                        // Convert Instant to LocalDate and format as YYYY-MM
+                        LocalDate paidDate = invoice.getPaidDate()
+                            .atZone(java.time.ZoneId.systemDefault())
+                            .toLocalDate();
+                        return paidDate.withDayOfMonth(1).toString().substring(0, 7); // "YYYY-MM"
+                    }
                 ));
             
             byMonth.forEach((monthStr, monthInvoices) -> {
-                // Format as "YYYY-MM" to match frontend expectation
-                String month = monthStr.substring(0, 7); // Extract "YYYY-MM" from "YYYY-MM-DD"
                 Money revenue = monthInvoices.stream()
                     .map(Invoice::getTotalAmount)
                     .reduce(Money.zero(), Money::add);
                 data.add(RevenueTrendResponse.RevenueTrendData.builder()
-                    .month(month)
+                    .month(monthStr)
                     .revenue(revenue)
                     .build());
             });
         } else if ("WEEKLY".equals(period)) {
-            // Group by week
+            // Group by week using paidDate
             Map<String, List<Invoice>> byWeek = invoices.stream()
+                .filter(invoice -> invoice.getPaidDate() != null) // Only include invoices with paid date
                 .collect(Collectors.groupingBy(
-                    invoice -> invoice.getIssueDate().toString().substring(0, 7) // Group by month for weekly (simplified)
+                    invoice -> {
+                        // Convert Instant to LocalDate and format as YYYY-MM for weekly grouping
+                        LocalDate paidDate = invoice.getPaidDate()
+                            .atZone(java.time.ZoneId.systemDefault())
+                            .toLocalDate();
+                        return paidDate.toString().substring(0, 7); // "YYYY-MM" (simplified weekly grouping)
+                    }
                 ));
             
             byWeek.forEach((weekStr, weekInvoices) -> {
-                String month = weekStr.substring(0, 7); // Format as "YYYY-MM"
                 Money revenue = weekInvoices.stream()
                     .map(Invoice::getTotalAmount)
                     .reduce(Money.zero(), Money::add);
                 data.add(RevenueTrendResponse.RevenueTrendData.builder()
-                    .month(month)
+                    .month(weekStr)
                     .revenue(revenue)
                     .build());
             });

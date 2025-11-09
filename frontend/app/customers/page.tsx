@@ -16,6 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { LoadingModal } from '@/components/ui/loading-modal';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useAuth } from '@/contexts/AuthContext';
 import { canCreateCustomer } from '@/lib/rbac';
@@ -56,6 +57,7 @@ export default function CustomersPage() {
 
   return (
     <Layout>
+      <LoadingModal isLoading={loading} />
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Customers</h1>
@@ -128,19 +130,30 @@ export default function CustomersPage() {
                     <TableHead>Status</TableHead>
                     <TableHead>Credit Balance</TableHead>
                     <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {customers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                         No customers found
                       </TableCell>
                     </TableRow>
                   ) : (
                     customers.map((customer) => (
-                      <TableRow key={customer.id}>
+                <TableRow
+                  key={customer.id}
+                  className="cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => router.push(`/customers/${customer.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      router.push(`/customers/${customer.id}`);
+                    }
+                  }}
+                >
                         <TableCell className="font-medium">{customer.companyName}</TableCell>
                         <TableCell>{customer.contactName || '-'}</TableCell>
                         <TableCell>{customer.email}</TableCell>
@@ -162,13 +175,6 @@ export default function CustomersPage() {
                         </TableCell>
                         <TableCell>{formatCurrency(customer.creditBalance.amount)}</TableCell>
                         <TableCell>{formatDate(customer.createdAt)}</TableCell>
-                        <TableCell className="text-right">
-                          <Link href={`/customers/${customer.id}`}>
-                            <Button variant="ghost" size="sm">
-                              View
-                            </Button>
-                          </Link>
-                        </TableCell>
                       </TableRow>
                     ))
                   )}

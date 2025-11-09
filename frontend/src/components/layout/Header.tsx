@@ -31,117 +31,121 @@ export function Header() {
     .slice(0, 2) || 'U';
 
   return (
-    <header className="border-b bg-white">
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <Link href="/dashboard" className="text-xl font-bold text-gray-900">
-          InvoiceMe
-        </Link>
+    <header className="border-b bg-white shadow-sm">
+      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-8">
+          <Link href="/dashboard" className="text-xl font-bold text-gray-900">
+            InvoiceMe
+          </Link>
 
-        <nav className="flex items-center gap-6">
-          {user && (
-            <>
-              {user.role === 'CUSTOMER' ? (
-                <Link
-                  href="/customer-portal"
-                  className={`text-sm font-medium ${
-                    pathname === '/customer-portal'
-                      ? 'text-blue-600'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Portal
-                </Link>
-              ) : (
-                <Link
-                  href="/dashboard"
-                  className={`text-sm font-medium ${
-                    pathname === '/dashboard' ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Dashboard
-                </Link>
-              )}
-              {user.role !== 'CUSTOMER' && (
-                <>
+          <nav className="flex items-center gap-2">
+            {user && (
+              <>
+                {user.role === 'CUSTOMER' ? (
                   <Link
-                    href="/customers"
-                    className={`text-sm font-medium ${
-                      pathname?.startsWith('/customers')
-                        ? 'text-blue-600'
-                        : 'text-gray-600 hover:text-gray-900'
+                    href="/customer-portal"
+                    className={`text-sm font-medium px-4 py-2 rounded-md transition-all ${
+                      pathname === '/customer-portal'
+                        ? 'bg-gray-900 text-white'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                   >
-                    Customers
+                    Portal
                   </Link>
+                ) : (
                   <Link
-                    href="/invoices"
-                    className={`text-sm font-medium ${
-                      pathname?.startsWith('/invoices')
-                        ? 'text-blue-600'
-                        : 'text-gray-600 hover:text-gray-900'
+                    href="/dashboard"
+                    className={`text-sm font-medium px-4 py-2 rounded-md transition-all ${
+                      pathname === '/dashboard' 
+                        ? 'bg-gray-900 text-white' 
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                   >
-                    Invoices
+                    Dashboard
                   </Link>
-                  <Link
-                    href="/payments"
-                    className={`text-sm font-medium ${
-                      pathname?.startsWith('/payments')
-                        ? 'text-blue-600'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    Payments
-                  </Link>
-                  {user.role === 'SYSADMIN' && (
+                )}
+                {user.role !== 'CUSTOMER' && (
+                  <>
                     <Link
-                      href="/users/pending"
-                      className={`text-sm font-medium ${
-                        pathname?.startsWith('/users')
-                          ? 'text-blue-600'
-                          : 'text-gray-600 hover:text-gray-900'
+                      href="/customers"
+                      className={`text-sm font-medium px-4 py-2 rounded-md transition-all ${
+                        pathname?.startsWith('/customers')
+                          ? 'bg-gray-900 text-white'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                       }`}
                     >
-                      Users
+                      Customers
                     </Link>
-                  )}
-                </>
-              )}
-              {user.role === 'CUSTOMER' && (
-                <Link
-                  href="/invoices"
-                  className={`text-sm font-medium ${
-                    pathname?.startsWith('/invoices')
-                      ? 'text-blue-600'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  My Invoices
-                </Link>
-              )}
-            </>
-          )}
+                    <Link
+                      href="/invoices"
+                      className={`text-sm font-medium px-4 py-2 rounded-md transition-all ${
+                        pathname?.startsWith('/invoices')
+                          ? 'bg-gray-900 text-white'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                    >
+                      Invoices
+                    </Link>
+                    <Link
+                      href="/payments"
+                      className={`text-sm font-medium px-4 py-2 rounded-md transition-all ${
+                        pathname?.startsWith('/payments')
+                          ? 'bg-gray-900 text-white'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                    >
+                      Payments
+                    </Link>
+                    {user.role === 'SYSADMIN' && (
+                      <Link
+                        href="/users/pending"
+                        className={`text-sm font-medium px-4 py-2 rounded-md transition-all ${
+                          pathname?.startsWith('/users')
+                            ? 'bg-gray-900 text-white'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        }`}
+                      >
+                        Users
+                      </Link>
+                    )}
+                  </>
+                )}
+                {user.role === 'CUSTOMER' && (
+                  <Link
+                    href="/invoices"
+                    className={`text-sm font-medium px-4 py-2 rounded-md transition-all ${
+                      pathname?.startsWith('/invoices')
+                        ? 'bg-gray-900 text-white'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                  >
+                    My Invoices
+                  </Link>
+                )}
+              </>
+            )}
+          </nav>
+        </div>
 
-          {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>{userInitials}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end">
-                <div className="px-2 py-1.5 text-sm">
-                  <div className="font-medium">{user.fullName}</div>
-                  <div className="text-xs text-gray-500">{user.email}</div>
-                  <div className="text-xs text-gray-500 mt-1">{user.role}</div>
-                </div>
-                <DropdownMenuItem onClick={logout}>Log out</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </nav>
+        {user && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback>{userInitials}</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end">
+              <div className="px-2 py-1.5 text-sm">
+                <div className="font-medium">{user.fullName}</div>
+                <div className="text-xs text-gray-500">{user.email}</div>
+                <div className="text-xs text-gray-500 mt-1">{user.role}</div>
+              </div>
+              <DropdownMenuItem onClick={logout}>Log out</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </header>
   );

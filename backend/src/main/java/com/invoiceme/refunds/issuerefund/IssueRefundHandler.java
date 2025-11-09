@@ -47,8 +47,9 @@ public class IssueRefundHandler {
         Customer customer = customerRepository.findById(invoice.getCustomerId())
             .orElseThrow(() -> new IllegalArgumentException("Customer not found: " + invoice.getCustomerId()));
         
-        // Record refund on invoice (reduces amountPaid, updates balance)
-        invoice.recordRefund(command.getAmount());
+        // Apply as credit to customer account (does NOT affect invoice balance)
+        customer.applyCredit(command.getAmount());
+        customerRepository.save(customer);
         
         // Create refund payment record using factory method
         Payment refund = Payment.createRefund(
@@ -62,14 +63,7 @@ public class IssueRefundHandler {
         // Save refund payment
         Payment savedRefund = paymentRepository.save(refund);
         
-        // Save invoice (balance updated by recordRefund)
-        Invoice savedInvoice = invoiceRepository.save(invoice);
-        
-        // Apply as credit if requested
-        if (Boolean.TRUE.equals(command.getApplyAsCredit())) {
-            customer.applyCredit(command.getAmount());
-            customerRepository.save(customer);
-        }
+        // Invoice remains PAID with original balance (no changes needed)
         
         // Publish RefundIssuedEvent
         savedRefund.addDomainEvent(new RefundIssuedEvent(
@@ -81,14 +75,13 @@ public class IssueRefundHandler {
             customer.getEmail() != null ? customer.getEmail().getValue() : null,
             command.getAmount(),
             command.getReason(),
-            command.getApplyAsCredit(),
-            savedInvoice.getBalanceDue(),
-            savedInvoice.getStatus().name()
+            true, // Always applied as credit now
+            invoice.getBalanceDue(), // Balance unchanged
+            invoice.getStatus().name() // Status remains PAID
         ));
         
         // Publish domain events
         eventPublisher.publishEvents(savedRefund);
-        eventPublisher.publishEvents(savedInvoice);
         eventPublisher.publishEvents(customer);
         
         return savedRefund;

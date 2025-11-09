@@ -2,6 +2,10 @@ package com.invoiceme.payments;
 
 import com.invoiceme.domain.common.PaymentMethod;
 import com.invoiceme.domain.common.PaymentStatus;
+import com.invoiceme.domain.customer.Customer;
+import com.invoiceme.domain.invoice.Invoice;
+import com.invoiceme.infrastructure.persistence.CustomerRepository;
+import com.invoiceme.infrastructure.persistence.InvoiceRepository;
 import com.invoiceme.payments.getpayment.*;
 import com.invoiceme.payments.listpayments.*;
 import com.invoiceme.payments.recordpayment.*;
@@ -15,6 +19,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -37,6 +43,10 @@ public class PaymentController {
     private final ListPaymentsHandler listHandler;
     private final ListPaymentsMapper listMapper;
     
+    // Repositories for batch loading invoice numbers and customer names
+    private final InvoiceRepository invoiceRepository;
+    private final CustomerRepository customerRepository;
+    
     @PostMapping
     @PreAuthorize("hasAnyRole('SYSADMIN', 'ACCOUNTANT') or (hasRole('CUSTOMER') and @paymentService.isOwnInvoice(#request.invoiceId, authentication.name))")
     public ResponseEntity<PaymentDto> recordPayment(@Valid @RequestBody RecordPaymentRequest request) {
@@ -53,6 +63,19 @@ public class PaymentController {
         // Map entity to DTO
         PaymentDto response = recordMapper.toDto(payment);
         
+        // Populate invoice number and customer name
+        Invoice invoice = invoiceRepository.findById(payment.getInvoiceId())
+            .orElse(null);
+        Customer customer = customerRepository.findById(payment.getCustomerId())
+            .orElse(null);
+        
+        if (invoice != null) {
+            response.setInvoiceNumber(invoice.getInvoiceNumber().toString());
+        }
+        if (customer != null) {
+            response.setCustomerName(customer.getCompanyName());
+        }
+        
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
     
@@ -61,12 +84,18 @@ public class PaymentController {
         GetPaymentQuery query = new GetPaymentQuery(id);
         var payment = getHandler.handle(query);
         
+        // Load invoice and customer to populate invoice number and customer name
+        Invoice invoice = invoiceRepository.findById(payment.getInvoiceId())
+            .orElse(null);
+        Customer customer = customerRepository.findById(payment.getCustomerId())
+            .orElse(null);
+        
         PaymentDetailResponse response = PaymentDetailResponse.builder()
             .id(payment.getId())
             .invoiceId(payment.getInvoiceId())
-            .invoiceNumber(null) // Will be populated from invoice lookup if needed
+            .invoiceNumber(invoice != null ? invoice.getInvoiceNumber().toString() : "Unknown")
             .customerId(payment.getCustomerId())
-            .customerName(null) // Will be populated from customer lookup if needed
+            .customerName(customer != null ? customer.getCompanyName() : "Unknown Customer")
             .amount(payment.getAmount())
             .paymentMethod(payment.getPaymentMethod().name())
             .paymentDate(payment.getPaymentDate())
@@ -107,15 +136,32 @@ public class PaymentController {
         
         Page<com.invoiceme.domain.payment.Payment> paymentPage = listHandler.handle(query);
         
+        // Batch load invoice numbers and customer names for performance
+        List<UUID> invoiceIds = paymentPage.getContent().stream()
+            .map(com.invoiceme.domain.payment.Payment::getInvoiceId)
+            .distinct()
+            .collect(Collectors.toList());
+        
+        List<UUID> customerIds = paymentPage.getContent().stream()
+            .map(com.invoiceme.domain.payment.Payment::getCustomerId)
+            .distinct()
+            .collect(Collectors.toList());
+        
+        Map<UUID, String> invoiceNumberMap = invoiceRepository.findAllById(invoiceIds).stream()
+            .collect(Collectors.toMap(Invoice::getId, invoice -> invoice.getInvoiceNumber().toString()));
+        
+        Map<UUID, String> customerNameMap = customerRepository.findAllById(customerIds).stream()
+            .collect(Collectors.toMap(Customer::getId, Customer::getCompanyName));
+        
         PagedPaymentResponse response = PagedPaymentResponse.builder()
             .content(paymentPage.getContent().stream()
                 .map(payment -> {
                     PaymentDto dto = new PaymentDto();
                     dto.setId(payment.getId());
                     dto.setInvoiceId(payment.getInvoiceId());
-                    dto.setInvoiceNumber(null); // Will be populated from invoice lookup if needed
+                    dto.setInvoiceNumber(invoiceNumberMap.getOrDefault(payment.getInvoiceId(), "Unknown"));
                     dto.setCustomerId(payment.getCustomerId());
-                    dto.setCustomerName(null); // Will be populated from customer lookup if needed
+                    dto.setCustomerName(customerNameMap.getOrDefault(payment.getCustomerId(), "Unknown Customer"));
                     dto.setAmount(payment.getAmount());
                     dto.setPaymentMethod(payment.getPaymentMethod().name());
                     dto.setPaymentDate(payment.getPaymentDate());

@@ -28,9 +28,10 @@ interface PaymentFormProps {
   invoiceId: string;
   balanceDue: number;
   onSuccess?: () => void;
+  userRole?: string;
 }
 
-export function PaymentForm({ invoiceId, balanceDue, onSuccess }: PaymentFormProps) {
+export function PaymentForm({ invoiceId, balanceDue, onSuccess, userRole }: PaymentFormProps) {
   const { recordPayment, loading, error } = useRecordPayment();
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CREDIT_CARD');
 
@@ -157,7 +158,10 @@ export function PaymentForm({ invoiceId, balanceDue, onSuccess }: PaymentFormPro
 
       <div className="flex gap-2 pt-4">
         <Button type="submit" className="flex-1" disabled={loading}>
-          {loading ? 'Recording...' : 'Record Payment'}
+          {loading 
+            ? (userRole === 'CUSTOMER' ? 'Processing...' : 'Recording...')
+            : (userRole === 'CUSTOMER' ? 'Pay Invoice' : 'Record Payment')
+          }
         </Button>
       </div>
     </form>

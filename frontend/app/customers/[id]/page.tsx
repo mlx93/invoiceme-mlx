@@ -203,7 +203,9 @@ export default function CustomerDetailPage() {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm text-gray-500">Credit Balance</p>
-                <p className="text-2xl font-bold">{formatCurrency(customer.creditBalance.amount)}</p>
+                <p className={`text-2xl font-bold ${customer.creditBalance.amount > 0 ? 'text-green-600' : 'text-black'}`}>
+                  {formatCurrency(customer.creditBalance.amount)}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Outstanding Balance</p>

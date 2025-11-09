@@ -133,7 +133,7 @@ export default function PendingUsersPage() {
                 </TableHeader>
                 <TableBody>
                   {users.map((pendingUser) => (
-                    <TableRow key={pendingUser.id}>
+                    <TableRow key={pendingUser.id} className="hover:bg-gray-100 transition-colors">
                       <TableCell className="font-medium">{pendingUser.fullName}</TableCell>
                       <TableCell>{pendingUser.email}</TableCell>
                       <TableCell>

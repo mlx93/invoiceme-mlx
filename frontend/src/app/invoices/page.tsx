@@ -30,7 +30,11 @@ function InvoicesPageContent() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [search, setSearch] = useState('');
 
-  const customerId = searchParams.get('customerId') || undefined;
+  // For CUSTOMER role, always filter by their customerId
+  // For other roles, use customerId from query params if provided
+  const customerId = user?.role === 'CUSTOMER' 
+    ? user.customerId 
+    : (searchParams.get('customerId') || undefined);
 
   const { invoices, loading, error, pagination } = useInvoices({
     page,

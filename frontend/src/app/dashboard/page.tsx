@@ -25,6 +25,13 @@ export default function DashboardPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
+  useEffect(() => {
+    // Customer role redirects to dedicated portal
+    if (!authLoading && isAuthenticated && user?.role === 'CUSTOMER') {
+      router.push('/customer-portal');
+    }
+  }, [authLoading, isAuthenticated, user?.role, router]);
+
   if (authLoading || !isAuthenticated) {
     return (
       <Layout>
@@ -35,9 +42,8 @@ export default function DashboardPage() {
     );
   }
 
-  // Customer role redirects to dedicated portal
+  // Show loading state while redirecting customers
   if (user?.role === 'CUSTOMER') {
-    router.push('/customer-portal');
     return (
       <Layout>
         <div className="flex items-center justify-center h-64">

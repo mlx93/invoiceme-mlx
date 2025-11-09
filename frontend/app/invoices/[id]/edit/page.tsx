@@ -279,8 +279,14 @@ export default function EditInvoicePage() {
 
   const handleSendInvoice = async () => {
     try {
-      await markAsSent(invoiceId);
+      const sentInvoice = await markAsSent(invoiceId);
       setSuccessDialogOpen(false);
+      
+      // Check if invoice was paid with credit (balance is zero after sending)
+      if (sentInvoice.balanceDue?.amount === 0 && sentInvoice.amountPaid?.amount === 0) {
+        alert('✅ Invoice sent and paid in full with account credit!');
+      }
+      
       router.push(`/invoices/${invoiceId}`);
     } catch (err) {
       // Error handled by hook

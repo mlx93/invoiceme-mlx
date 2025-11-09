@@ -292,13 +292,13 @@ public class Invoice extends AggregateRoot {
             throw new IllegalArgumentException("Credit amount must be positive");
         }
         
-        // Create discount line item
+        // Create credit line item with negative unit price to reduce total
         LineItem creditLineItem = LineItem.create(
-            "Credit Applied - " + creditAmount.toString(),
+            "Account Credit Applied",
             1,
-            creditAmount,
-            DiscountType.FIXED,
-            creditAmount,
+            creditAmount.multiply(-1.0), // Negative unit price reduces total
+            DiscountType.NONE,
+            Money.zero(),
             BigDecimal.ZERO,
             lineItems.size() // Add at end
         );

@@ -173,20 +173,23 @@ export default function InvoiceDetailPage() {
             {(invoice.status === 'SENT' || invoice.status === 'OVERDUE') && canRecord && (
               <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button>Record Payment</Button>
+                  <Button>{user?.role === 'CUSTOMER' ? 'Pay Invoice' : 'Record Payment'}</Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Record Payment</DialogTitle>
+                    <DialogTitle>{user?.role === 'CUSTOMER' ? 'Pay Invoice' : 'Record Payment'}</DialogTitle>
                     <DialogDescription>
-                      Record a payment for invoice {invoice.invoiceNumber}. Balance due:{' '}
-                      {formatCurrency(invoice.balanceDue.amount)}
+                      {user?.role === 'CUSTOMER' 
+                        ? `Pay invoice ${invoice.invoiceNumber}. Balance due: ${formatCurrency(invoice.balanceDue.amount)}`
+                        : `Record a payment for invoice ${invoice.invoiceNumber}. Balance due: ${formatCurrency(invoice.balanceDue.amount)}`
+                      }
                     </DialogDescription>
                   </DialogHeader>
                   <PaymentForm
                     invoiceId={invoice.id}
                     balanceDue={invoice.balanceDue.amount}
                     onSuccess={handlePaymentRecorded}
+                    userRole={user?.role}
                   />
                 </DialogContent>
               </Dialog>

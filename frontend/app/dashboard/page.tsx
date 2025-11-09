@@ -4,26 +4,41 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useDashboardMetrics, useRevenueTrend, useInvoiceStatus, useAgingReport } from '@/hooks/useDashboard';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { LoadingModal } from '@/components/ui/loading-modal';
+import { useDashboardMetrics, useInvoiceStatus, useAgingReport } from '@/hooks/useDashboard';
 import { useAuth } from '@/contexts/AuthContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { formatCurrency } from '@/lib/utils';
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { metrics, loading: metricsLoading } = useDashboardMetrics();
-  const { data: revenueData, loading: revenueLoading } = useRevenueTrend();
   const { data: statusData, loading: statusLoading } = useInvoiceStatus();
   const { data: agingData, loading: agingLoading } = useAgingReport();
+
+  // Combine all loading states
+  const isLoading = metricsLoading || statusLoading || agingLoading;
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push('/login');
     }
   }, [authLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    // Customer role redirects to dedicated portal
+    if (!authLoading && isAuthenticated && user?.role === 'CUSTOMER') {
+      router.push('/customer-portal');
+    }
+  }, [authLoading, isAuthenticated, user?.role, router]);
 
   if (authLoading || !isAuthenticated) {
     return (
@@ -35,9 +50,8 @@ export default function DashboardPage() {
     );
   }
 
-  // Customer role redirects to dedicated portal
+  // Show loading state while redirecting customers
   if (user?.role === 'CUSTOMER') {
-    router.push('/customer-portal');
     return (
       <Layout>
         <div className="flex items-center justify-center h-64">
@@ -49,7 +63,8 @@ export default function DashboardPage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <LoadingModal isLoading={isLoading} />
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Dashboard</h1>
         </div>
@@ -57,143 +72,201 @@ export default function DashboardPage() {
         {/* Metrics Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Revenue (MTD)</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-semibold leading-tight">Revenue (MTD)</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+            <CardContent className="pt-0">
+              <div className="text-3xl font-bold">
                 {metrics?.totalRevenueMTD?.amount ? formatCurrency(metrics.totalRevenueMTD.amount) : '$0.00'}
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Outstanding Invoices</CardTitle>
+            <CardHeader className="pb-1">
+              <div className="flex items-start gap-2">
+                <CardTitle className="text-lg font-semibold leading-tight flex-1">Outstanding Invoices</CardTitle>
+                <div className="border border-gray-900 rounded px-2 py-1">
+                  <span className="text-3xl font-bold">{metrics?.outstandingInvoicesCount ?? 0}</span>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics?.outstandingInvoicesCount ?? 0}</div>
-              <p className="text-xs text-gray-500">
+            <CardContent className="pt-1">
+              <div className="text-3xl font-bold">
                 {metrics?.outstandingInvoicesAmount?.amount ? formatCurrency(metrics.outstandingInvoicesAmount.amount) : '$0.00'}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Overdue Invoices</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics?.overdueInvoicesCount ?? 0}</div>
-              <p className="text-xs text-gray-500">
-                {metrics?.overdueInvoicesAmount?.amount ? formatCurrency(metrics.overdueInvoicesAmount.amount) : '$0.00'}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics?.activeCustomers ?? 0}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Charts */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Revenue Trend (12 Months)</CardTitle>
-              <CardDescription>Monthly revenue over the past year</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {revenueLoading ? (
-                <div className="h-[300px] flex items-center justify-center">Loading...</div>
-              ) : revenueData?.data ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={revenueData.data}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                    <Bar dataKey="revenue.amount" fill="#0088FE" />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-[300px] flex items-center justify-center text-gray-500">
-                  No data available
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Invoice Status Breakdown</CardTitle>
-              <CardDescription>Distribution of invoices by status</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {statusLoading ? (
-                <div className="h-[300px] flex items-center justify-center">Loading...</div>
-              ) : statusData?.data ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={statusData.data as any}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ status, count }: any) => `${status}: ${count}`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="count"
-                    >
-                      {statusData.data.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-[300px] flex items-center justify-center text-gray-500">
-                  No data available
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Aging Report */}
-        {agingData?.data && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Aging Report</CardTitle>
-              <CardDescription>Outstanding invoices by age</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2">Age Bucket</th>
-                      <th className="text-right p-2">Count</th>
-                      <th className="text-right p-2">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {agingData.data.map((item) => (
-                      <tr key={item.bucket} className="border-b">
-                        <td className="p-2">{item.bucket} days</td>
-                        <td className="text-right p-2">{item.count}</td>
-                        <td className="text-right p-2">{formatCurrency(item.amount.amount)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
             </CardContent>
           </Card>
-        )}
+          <Card>
+            <CardHeader className="pb-1">
+              <div className="flex items-start gap-2">
+                <CardTitle className="text-lg font-semibold leading-tight flex-1">Overdue Invoices</CardTitle>
+                <div className="border border-gray-900 rounded px-2 py-1">
+                  <span className="text-3xl font-bold">{metrics?.overdueInvoicesCount ?? 0}</span>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-1">
+              <div className="text-3xl font-bold">
+                {metrics?.overdueInvoicesAmount?.amount ? formatCurrency(metrics.overdueInvoicesAmount.amount) : '$0.00'}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-semibold leading-tight">Active Customers</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-3xl font-bold">{metrics?.activeCustomers ?? 0}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Aging Report and Status */}
+        <div className="grid gap-3 md:grid-cols-2">
+          {/* Aging Report - Compact */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Aging Report</CardTitle>
+              <CardDescription className="text-sm">Outstanding invoices by age</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {agingLoading ? (
+                <div className="h-[200px] flex items-center justify-center text-sm">Loading...</div>
+              ) : agingData?.data && agingData.data.length > 0 ? (
+                <div className="space-y-3">
+                  {agingData.data.map((item) => {
+                    // Determine color coding based on age bucket
+                    const bucketNumber = parseInt(item.bucket.split('-')[0]) || 0;
+                    let bgGradient = '';
+                    let borderColor = '';
+                    
+                    if (bucketNumber >= 90) {
+                      bgGradient = 'bg-red-50';
+                      borderColor = 'border-l-red-500';
+                    } else if (bucketNumber >= 61) {
+                      bgGradient = 'bg-orange-50';
+                      borderColor = 'border-l-orange-500';
+                    } else if (bucketNumber >= 31) {
+                      bgGradient = 'bg-yellow-50';
+                      borderColor = 'border-l-yellow-500';
+                    } else {
+                      bgGradient = 'bg-green-50';
+                      borderColor = 'border-l-green-500';
+                    }
+                    
+                    return (
+                      <div 
+                        key={item.bucket} 
+                        className={`${bgGradient} ${borderColor} border-l-4 rounded-md p-3 flex items-center hover:shadow-sm transition-all mb-2`}
+                      >
+                        <div className="flex items-center gap-4 flex-1 py-1">
+                          <div className="text-sm font-bold uppercase tracking-wide text-gray-700 min-w-[100px]">
+                            {item.bucket} days
+                          </div>
+                          <div className="text-xl font-bold text-gray-900">
+                            {formatCurrency(item.amount.amount)}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 ml-auto mr-8">
+                          <div className="text-sm text-gray-500 uppercase font-semibold">Invoices</div>
+                          <div className="text-lg font-bold text-gray-700">
+                            {item.count}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="h-[200px] flex flex-col items-center justify-center text-gray-500">
+                  <div className="w-12 h-12 mb-3 rounded-full bg-green-100 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-medium">No Outstanding Invoices</p>
+                  <p className="text-xs mt-1">All invoices are paid or cancelled</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Invoice Status Breakdown */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Invoice Status Breakdown</CardTitle>
+              <CardDescription className="text-sm">Distribution of invoices by status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {statusLoading ? (
+                <div className="h-[200px] flex items-center justify-center">Loading...</div>
+              ) : statusData?.data ? (
+                <div className="space-y-2">
+                  {statusData.data
+                    .filter((item) => item.status !== 'CANCELLED')
+                    .map((item) => {
+                    // Calculate percentage
+                    const totalCount = statusData.data
+                      .filter((i) => i.status !== 'CANCELLED')
+                      .reduce((sum, i) => sum + i.count, 0);
+                    const percentage = totalCount > 0 ? (item.count / totalCount) * 100 : 0;
+                    
+                    // Color coding by status
+                    let bgColor = '';
+                    let barColor = '';
+                    
+                    if (item.status === 'PAID') {
+                      bgColor = 'bg-green-50';
+                      barColor = 'bg-green-500';
+                    } else if (item.status === 'SENT') {
+                      bgColor = 'bg-blue-50';
+                      barColor = 'bg-blue-500';
+                    } else if (item.status === 'OVERDUE') {
+                      bgColor = 'bg-red-50';
+                      barColor = 'bg-red-500';
+                    } else if (item.status === 'DRAFT') {
+                      bgColor = 'bg-gray-50';
+                      barColor = 'bg-gray-500';
+                    }
+                    
+                    return (
+                      <div 
+                        key={item.status} 
+                        className={`${bgColor} rounded-md p-2.5 hover:shadow-sm transition-all`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <span className="text-sm font-bold uppercase tracking-wide text-gray-700 min-w-[90px]">
+                              {item.status}
+                            </span>
+                            <span className="text-xl font-bold text-gray-900">
+                              {item.count}
+                            </span>
+                          </div>
+                          <div className="text-lg font-bold text-gray-700">
+                            {formatCurrency(item.amount.amount)}
+                          </div>
+                        </div>
+                        
+                        {/* Progress bar */}
+                        <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                          <div 
+                            className={`${barColor} h-1.5 rounded-full transition-all duration-500`}
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="h-[200px] flex items-center justify-center text-gray-500">
+                  No data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </Layout>
   );
