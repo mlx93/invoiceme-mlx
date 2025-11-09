@@ -209,7 +209,7 @@ export default function EditInvoicePage() {
     }
   };
 
-  if (authLoading || !isAuthenticated || fetchLoading) {
+  if (authLoading || !isAuthenticated || fetchLoading || !invoice) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-64">
@@ -260,7 +260,7 @@ export default function EditInvoicePage() {
                 <div>
                   <Label htmlFor="customerId">Customer *</Label>
                   <Select
-                    value={customerId}
+                    value={customerId || invoice.customerId}
                     onValueChange={(value) => setValue('customerId', value)}
                   >
                     <SelectTrigger className="mt-1">
