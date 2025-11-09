@@ -123,7 +123,7 @@ jobs:
         with:
           aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          application_name: invoiceme-mlx
+          application_name: invoiceme-mlx-frontend
           environment_name: Invoiceme-mlx-frontend-env
           version_label: frontend-${{ github.sha }}-${{ github.run_number }}
           region: ${{ env.AWS_REGION }}
