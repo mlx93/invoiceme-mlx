@@ -13,16 +13,16 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AgingReportResponse {
-    private List<AgingBucket> buckets;
+    private List<AgingReportData> data; // Renamed from buckets to match frontend
     
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class AgingBucket {
-        private String range; // "0-30", "31-60", "61-90", "90+"
-        private Integer invoiceCount;
-        private Money totalAmount;
+    public static class AgingReportData {
+        private String bucket; // Renamed from range to match frontend - "0-30", "31-60", "61-90", "90+"
+        private Integer count; // Renamed from invoiceCount to match frontend
+        private Money amount; // Renamed from totalAmount to match frontend
     }
 }
 

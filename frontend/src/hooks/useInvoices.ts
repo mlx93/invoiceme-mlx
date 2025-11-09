@@ -68,26 +68,26 @@ export function useInvoice(id: string | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchInvoice = useCallback(async () => {
     if (!id) return;
-
-    const fetchInvoice = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await apiClient.get<InvoiceDetailResponse>(`/invoices/${id}`);
-        setInvoice(response.data);
-      } catch (err) {
-        setError(getErrorMessage(err));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInvoice();
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.get<InvoiceDetailResponse>(`/invoices/${id}`);
+      setInvoice(response.data);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
-  return { invoice, loading, error, refetch: () => id && fetchInvoice() };
+  useEffect(() => {
+    fetchInvoice();
+  }, [fetchInvoice]);
+
+  return { invoice, loading, error, refetch: fetchInvoice };
 }
 
 export function useCreateInvoice() {

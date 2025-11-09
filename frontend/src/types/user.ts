@@ -1,5 +1,7 @@
 import { UserRole, UserStatus } from './common';
 
+export type { UserRole, UserStatus };
+
 export interface RegisterRequest {
   email: string;
   password: string;
@@ -43,4 +45,6 @@ export interface JwtPayload {
   iat: number;
   exp: number;
 }
+
+export type PendingUserListResponse = UserResponse[];
 

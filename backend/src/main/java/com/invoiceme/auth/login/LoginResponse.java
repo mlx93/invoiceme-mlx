@@ -12,10 +12,22 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoginResponse {
+    
     private String token;
-    private UUID userId;
-    private String email;
-    private String role;
-    private String fullName;
+    private AuthenticatedUser user;
+    
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AuthenticatedUser {
+        private UUID id;
+        private String email;
+        private String fullName;
+        private String role;
+        private String status;
+        private UUID customerId;
+        private String createdAt;
+    }
 }
 

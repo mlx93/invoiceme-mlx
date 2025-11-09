@@ -62,11 +62,11 @@ public class JwtTokenProvider {
     }
     
     private Claims getAllClaimsFromToken(String token) {
-        return Jwts.parserBuilder()
-            .setSigningKey(getSigningKey())
+        return Jwts.parser()
+            .verifyWith(getSigningKey())
             .build()
-            .parseClaimsJws(token)
-            .getBody();
+            .parseSignedClaims(token)
+            .getPayload();
     }
     
     public Boolean isTokenExpired(String token) {

@@ -6,10 +6,10 @@ import com.invoiceme.domain.payment.Payment;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", imports = {Money.class})
 public interface IssueRefundMapper {
     
-    @Mapping(target = "amount", expression = "java(Money.of(request.getAmount()))")
+    @Mapping(target = "amount", expression = "java(com.invoiceme.domain.common.Money.of(request.getAmount()))")
     IssueRefundCommand requestToCommand(IssueRefundRequest request);
     
     PaymentDto toDto(Payment payment);

@@ -36,8 +36,12 @@ public class RecurringInvoiceTemplate extends AggregateRoot {
     @Column(name = "template_name", nullable = false, length = 255)
     private String templateName;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "frequency", nullable = false)
+    @Convert(converter = com.invoiceme.infrastructure.persistence.FrequencyConverter.class)
+    @Column(name = "frequency", nullable = false, columnDefinition = "frequency_enum")
+    @org.hibernate.annotations.ColumnTransformer(
+        read = "frequency::text",
+        write = "?::frequency_enum"
+    )
     private Frequency frequency;
     
     @Column(name = "start_date", nullable = false)
@@ -49,12 +53,20 @@ public class RecurringInvoiceTemplate extends AggregateRoot {
     @Column(name = "next_invoice_date", nullable = false)
     private LocalDate nextInvoiceDate;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Convert(converter = com.invoiceme.infrastructure.persistence.TemplateStatusConverter.class)
+    @Column(name = "status", nullable = false, columnDefinition = "template_status_enum")
+    @org.hibernate.annotations.ColumnTransformer(
+        read = "status::text",
+        write = "?::template_status_enum"
+    )
     private TemplateStatus status;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "payment_terms", nullable = false)
+    @Convert(converter = com.invoiceme.infrastructure.persistence.PaymentTermsConverter.class)
+    @Column(name = "payment_terms", nullable = false, columnDefinition = "payment_terms_enum")
+    @org.hibernate.annotations.ColumnTransformer(
+        read = "payment_terms::text",
+        write = "?::payment_terms_enum"
+    )
     private PaymentTerms paymentTerms;
     
     @Column(name = "auto_send", nullable = false)

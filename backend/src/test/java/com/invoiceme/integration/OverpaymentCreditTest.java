@@ -42,9 +42,7 @@ public class OverpaymentCreditTest {
     void setUp() {
         customer = Customer.create(
             "Test Company",
-            "John Doe",
             com.invoiceme.domain.common.Email.of("test@example.com"),
-            "555-1234",
             com.invoiceme.domain.common.CustomerType.COMMERCIAL
         );
         customer = customerRepository.save(customer);

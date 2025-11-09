@@ -25,7 +25,7 @@ public class LateFeeScheduledJob {
     private final InvoiceRepository invoiceRepository;
     private final DomainEventPublisher eventPublisher;
     
-    @Scheduled(cron = "0 0 1 * *", zone = "America/Chicago")
+    @Scheduled(cron = "0 0 1 * * ?", zone = "America/Chicago") // 6 fields: second minute hour day month day-of-week (? = any day)
     @Transactional
     public void applyLateFees() {
         log.info("Starting late fee application job");
@@ -50,8 +50,8 @@ public class LateFeeScheduledJob {
     }
     
     private void applyLateFeeIfNeeded(Invoice invoice, LocalDate today) {
-        // Check if invoice is overdue
-        if (!invoice.isOverdue(today)) {
+        // Check if invoice is overdue (method uses current date internally)
+        if (!invoice.isOverdue()) {
             return;
         }
         

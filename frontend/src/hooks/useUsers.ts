@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import apiClient, { getErrorMessage } from '@/lib/api';
 import { UserResponse, PendingUserListResponse } from '@/types/user';
 
@@ -7,22 +7,22 @@ export function usePendingUsers() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchPendingUsers = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await apiClient.get<PendingUserListResponse>('/users/pending');
-        setUsers(response.data);
-      } catch (err) {
-        setError(getErrorMessage(err));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPendingUsers();
+  const fetchPendingUsers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.get<PendingUserListResponse>('/users/pending');
+      setUsers(response.data);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchPendingUsers();
+  }, [fetchPendingUsers]);
 
   return { users, loading, error, refetch: fetchPendingUsers };
 }

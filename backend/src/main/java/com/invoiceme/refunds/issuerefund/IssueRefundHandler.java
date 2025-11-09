@@ -50,16 +50,14 @@ public class IssueRefundHandler {
         // Record refund on invoice (reduces amountPaid, updates balance)
         invoice.recordRefund(command.getAmount());
         
-        // Create refund payment record (negative amount for tracking)
-        Payment refund = new Payment();
-        refund.invoiceId = invoice.getId();
-        refund.customerId = customer.getId();
-        refund.amount = command.getAmount(); // Store as positive for tracking
-        refund.paymentMethod = PaymentMethod.ACH; // Refunds typically via ACH
-        refund.paymentDate = java.time.LocalDate.now();
-        refund.createdByUserId = command.getCreatedByUserId();
-        refund.status = com.invoiceme.domain.common.PaymentStatus.COMPLETED;
-        refund.notes = "Refund: " + command.getReason();
+        // Create refund payment record using factory method
+        Payment refund = Payment.createRefund(
+            invoice,
+            customer,
+            command.getAmount(),
+            command.getCreatedByUserId(),
+            command.getReason()
+        );
         
         // Save refund payment
         Payment savedRefund = paymentRepository.save(refund);
@@ -85,7 +83,7 @@ public class IssueRefundHandler {
             command.getReason(),
             command.getApplyAsCredit(),
             savedInvoice.getBalanceDue(),
-            savedInvoice.getStatus()
+            savedInvoice.getStatus().name()
         ));
         
         // Publish domain events

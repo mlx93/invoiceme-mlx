@@ -28,7 +28,7 @@ public class RecurringInvoiceScheduledJob {
     private final InvoiceNumberGenerator invoiceNumberGenerator;
     private final DomainEventPublisher eventPublisher;
     
-    @Scheduled(cron = "0 0 * * *", zone = "America/Chicago")
+    @Scheduled(cron = "0 0 * * * ?", zone = "America/Chicago") // 6 fields: second minute hour day month day-of-week (? = any day)
     @Transactional
     public void generateRecurringInvoices() {
         log.info("Starting recurring invoice generation job");

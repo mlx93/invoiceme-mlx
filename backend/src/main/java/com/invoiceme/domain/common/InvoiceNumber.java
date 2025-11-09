@@ -18,7 +18,7 @@ public class InvoiceNumber {
     
     private static final Pattern INVOICE_NUMBER_PATTERN = Pattern.compile("^INV-(\\d{4})-(\\d{4})$");
     
-    @Column(name = "invoice_number", length = 15, nullable = false, unique = true)
+    @Column(name = "invoice_number", length = 15, nullable = false, unique = true, columnDefinition = "varchar(15)")
     private String value;
     
     private InvoiceNumber(String value) {

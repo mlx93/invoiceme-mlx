@@ -13,19 +13,19 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode
 public class Address {
     
-    @Column(name = "street", length = 255)
+    @Column(name = "street", length = 255, columnDefinition = "varchar(255)")
     private String street;
     
-    @Column(name = "city", length = 100)
+    @Column(name = "city", length = 100, columnDefinition = "varchar(100)")
     private String city;
     
-    @Column(name = "state", length = 50)
+    @Column(name = "state", length = 50, columnDefinition = "varchar(50)")
     private String state;
     
-    @Column(name = "zip_code", length = 20)
+    @Column(name = "zip_code", length = 20, columnDefinition = "varchar(20)")
     private String zipCode;
     
-    @Column(name = "country", length = 100)
+    @Column(name = "country", length = 100, columnDefinition = "varchar(100)")
     private String country;
     
     private Address(String street, String city, String state, String zipCode, String country) {

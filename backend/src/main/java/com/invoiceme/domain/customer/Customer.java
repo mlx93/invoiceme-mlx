@@ -38,16 +38,24 @@ public class Customer extends AggregateRoot {
     @Embedded
     private Address address;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "customer_type", nullable = false)
+    @Convert(converter = com.invoiceme.infrastructure.persistence.CustomerTypeConverter.class)
+    @Column(name = "customer_type", nullable = false, columnDefinition = "customer_type_enum")
+    @org.hibernate.annotations.ColumnTransformer(
+        read = "customer_type::text",
+        write = "?::customer_type_enum"
+    )
     private CustomerType customerType;
     
     @Embedded
     @AttributeOverride(name = "amount", column = @Column(name = "credit_balance", nullable = false, precision = 19, scale = 2))
     private Money creditBalance;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Convert(converter = com.invoiceme.infrastructure.persistence.CustomerStatusConverter.class)
+    @Column(name = "status", nullable = false, columnDefinition = "customer_status_enum")
+    @org.hibernate.annotations.ColumnTransformer(
+        read = "status::text",
+        write = "?::customer_status_enum"
+    )
     private CustomerStatus status;
     
     @Column(name = "created_at", nullable = false, updatable = false)

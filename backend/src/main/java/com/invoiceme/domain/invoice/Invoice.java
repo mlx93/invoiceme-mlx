@@ -10,6 +10,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -28,7 +30,7 @@ public class Invoice extends AggregateRoot {
     private UUID id;
     
     @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "invoice_number", nullable = false, unique = true, length = 20))
+    @AttributeOverride(name = "value", column = @Column(name = "invoice_number", nullable = false, unique = true, length = 20, columnDefinition = "varchar(20)"))
     private InvoiceNumber invoiceNumber;
     
     @Column(name = "customer_id", nullable = false)
@@ -40,12 +42,20 @@ public class Invoice extends AggregateRoot {
     @Column(name = "due_date", nullable = false)
     private LocalDate dueDate;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Convert(converter = com.invoiceme.infrastructure.persistence.InvoiceStatusConverter.class)
+    @Column(name = "status", nullable = false, columnDefinition = "invoice_status_enum")
+    @org.hibernate.annotations.ColumnTransformer(
+        read = "status::text",
+        write = "?::invoice_status_enum"
+    )
     private InvoiceStatus status;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "payment_terms", nullable = false)
+    @Convert(converter = com.invoiceme.infrastructure.persistence.PaymentTermsConverter.class)
+    @Column(name = "payment_terms", nullable = false, columnDefinition = "payment_terms_enum")
+    @org.hibernate.annotations.ColumnTransformer(
+        read = "payment_terms::text",
+        write = "?::payment_terms_enum"
+    )
     private PaymentTerms paymentTerms;
     
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
@@ -236,7 +246,10 @@ public class Invoice extends AggregateRoot {
                 this.id,
                 this.invoiceNumber.toString(),
                 this.customerId,
-                this.totalAmount
+                null, // customerName - will be set by handler
+                this.totalAmount,
+                this.paidDate,
+                1 // paymentCount - will be updated by handler
             ));
         }
     }
@@ -331,6 +344,7 @@ public class Invoice extends AggregateRoot {
             this.id,
             this.invoiceNumber.toString(),
             this.customerId,
+            null, // customerName - will be set by handler
             null, // customerEmail - will be set by handler
             lateFeeAmount,
             this.balanceDue,

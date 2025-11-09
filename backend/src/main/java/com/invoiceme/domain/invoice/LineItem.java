@@ -36,8 +36,12 @@ public class LineItem {
     @AttributeOverride(name = "amount", column = @Column(name = "unit_price", nullable = false, precision = 19, scale = 2))
     private Money unitPrice;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "discount_type", nullable = false)
+    @Convert(converter = com.invoiceme.infrastructure.persistence.DiscountTypeConverter.class)
+    @Column(name = "discount_type", nullable = false, columnDefinition = "discount_type_enum")
+    @org.hibernate.annotations.ColumnTransformer(
+        read = "discount_type::text",
+        write = "?::discount_type_enum"
+    )
     private DiscountType discountType;
     
     @Embedded

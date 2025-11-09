@@ -6,7 +6,6 @@ import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class GetInvoiceStatusQuery {
     // No parameters - returns status breakdown
 }

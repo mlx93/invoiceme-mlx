@@ -34,8 +34,12 @@ public class Payment extends AggregateRoot {
     @AttributeOverride(name = "amount", column = @Column(name = "amount", nullable = false, precision = 19, scale = 2))
     private Money amount;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "payment_method", nullable = false)
+    @Convert(converter = com.invoiceme.infrastructure.persistence.PaymentMethodConverter.class)
+    @Column(name = "payment_method", nullable = false, columnDefinition = "payment_method_enum")
+    @org.hibernate.annotations.ColumnTransformer(
+        read = "payment_method::text",
+        write = "?::payment_method_enum"
+    )
     private PaymentMethod paymentMethod;
     
     @Column(name = "payment_date", nullable = false)
@@ -44,8 +48,12 @@ public class Payment extends AggregateRoot {
     @Column(name = "payment_reference", length = 100)
     private String paymentReference;
     
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Convert(converter = com.invoiceme.infrastructure.persistence.PaymentStatusConverter.class)
+    @Column(name = "status", nullable = false, columnDefinition = "payment_status_enum")
+    @org.hibernate.annotations.ColumnTransformer(
+        read = "status::text",
+        write = "?::payment_status_enum"
+    )
     private PaymentStatus status;
     
     @Column(name = "created_by_user_id")
@@ -115,6 +123,21 @@ public class Payment extends AggregateRoot {
         ));
         
         return payment;
+    }
+    
+    // Static factory method for refunds
+    public static Payment createRefund(Invoice invoice, Customer customer, Money refundAmount,
+                                       UUID createdByUserId, String reason) {
+        Payment refund = new Payment();
+        refund.invoiceId = invoice.getId();
+        refund.customerId = customer.getId();
+        refund.amount = refundAmount; // Store as positive for tracking
+        refund.paymentMethod = PaymentMethod.ACH; // Refunds typically via ACH
+        refund.paymentDate = LocalDate.now();
+        refund.createdByUserId = createdByUserId;
+        refund.status = PaymentStatus.REFUNDED;
+        refund.notes = "Refund: " + (reason != null ? reason : "");
+        return refund;
     }
     
     public void updateReference(String paymentReference) {

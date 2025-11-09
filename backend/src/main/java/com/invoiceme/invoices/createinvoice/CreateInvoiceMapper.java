@@ -20,6 +20,10 @@ public interface CreateInvoiceMapper {
     
     InvoiceDto toDto(com.invoiceme.domain.invoice.Invoice invoice);
     
+    default String map(InvoiceNumber invoiceNumber) {
+        return invoiceNumber == null ? null : invoiceNumber.getValue();
+    }
+    
     default List<LineItem> toLineItems(List<LineItemRequestDto> dtos) {
         if (dtos == null) {
             return null;

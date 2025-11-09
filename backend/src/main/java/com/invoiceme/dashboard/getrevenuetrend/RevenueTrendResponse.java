@@ -14,16 +14,15 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RevenueTrendResponse {
-    private List<RevenueDataPoint> dataPoints;
+    private List<RevenueTrendData> data; // Renamed from dataPoints to match frontend
     
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class RevenueDataPoint {
-        private LocalDate period;
+    public static class RevenueTrendData {
+        private String month; // Changed from period (LocalDate) to month (String) to match frontend
         private Money revenue;
-        private Integer invoiceCount;
     }
 }
 

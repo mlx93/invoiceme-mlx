@@ -44,9 +44,7 @@ public class CustomerPaymentFlowTest {
         // Create test customer
         customer = Customer.create(
             "Test Company",
-            "John Doe",
             com.invoiceme.domain.common.Email.of("test@example.com"),
-            "555-1234",
             CustomerType.COMMERCIAL
         );
         customer = customerRepository.save(customer);

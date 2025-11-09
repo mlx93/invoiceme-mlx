@@ -8,14 +8,18 @@ import com.invoiceme.domain.customer.Customer;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", imports = {Email.class})
 public interface CreateCustomerMapper {
     
-    @Mapping(target = "email", expression = "java(Email.of(request.getEmail()))")
+    @Mapping(target = "email", expression = "java(com.invoiceme.domain.common.Email.of(request.getEmail()))")
     @Mapping(target = "address", expression = "java(toAddress(request.getAddress()))")
     CreateCustomerCommand requestToCommand(CreateCustomerRequest request);
     
     CustomerDto toDto(Customer customer);
+    
+    default String map(Email email) {
+        return email == null ? null : email.getValue();
+    }
     
     default Address toAddress(AddressDto dto) {
         if (dto == null) {

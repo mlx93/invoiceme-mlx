@@ -15,7 +15,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
+public interface InvoiceRepository extends JpaRepository<Invoice, UUID>, InvoiceRepositoryCustom {
     
     Optional<Invoice> findByInvoiceNumber(String invoiceNumber);
     
@@ -25,26 +25,16 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
     
     Page<Invoice> findByCustomerIdAndStatus(UUID customerId, InvoiceStatus status, Pageable pageable);
     
-    @Query("SELECT i FROM Invoice i WHERE " +
-           "(:status IS NULL OR i.status IN :statusList) AND " +
-           "(:customerId IS NULL OR i.customerId = :customerId) AND " +
-           "(:issueDateFrom IS NULL OR i.issueDate >= :issueDateFrom) AND " +
-           "(:issueDateTo IS NULL OR i.issueDate <= :issueDateTo) AND " +
-           "(:dueDateFrom IS NULL OR i.dueDate >= :dueDateFrom) AND " +
-           "(:dueDateTo IS NULL OR i.dueDate <= :dueDateTo) AND " +
-           "(:amountFrom IS NULL OR i.totalAmount.amount >= :amountFrom) AND " +
-           "(:amountTo IS NULL OR i.totalAmount.amount <= :amountTo) AND " +
-           "(:search IS NULL OR i.invoiceNumber.value LIKE CONCAT('%', :search, '%'))")
     Page<Invoice> findByFilters(
-        @Param("status") List<InvoiceStatus> statusList,
-        @Param("customerId") UUID customerId,
-        @Param("issueDateFrom") LocalDate issueDateFrom,
-        @Param("issueDateTo") LocalDate issueDateTo,
-        @Param("dueDateFrom") LocalDate dueDateFrom,
-        @Param("dueDateTo") LocalDate dueDateTo,
-        @Param("amountFrom") java.math.BigDecimal amountFrom,
-        @Param("amountTo") java.math.BigDecimal amountTo,
-        @Param("search") String search,
+        List<InvoiceStatus> statusList,
+        UUID customerId,
+        LocalDate issueDateFrom,
+        LocalDate issueDateTo,
+        LocalDate dueDateFrom,
+        LocalDate dueDateTo,
+        java.math.BigDecimal amountFrom,
+        java.math.BigDecimal amountTo,
+        String search,
         Pageable pageable
     );
     

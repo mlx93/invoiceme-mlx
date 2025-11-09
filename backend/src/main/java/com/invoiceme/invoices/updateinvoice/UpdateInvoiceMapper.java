@@ -19,6 +19,10 @@ public interface UpdateInvoiceMapper {
     
     InvoiceDto toDto(Invoice invoice);
     
+    default String map(com.invoiceme.domain.common.InvoiceNumber invoiceNumber) {
+        return invoiceNumber == null ? null : invoiceNumber.getValue();
+    }
+    
     default List<LineItem> toLineItems(List<LineItemRequestDto> dtos) {
         if (dtos == null) {
             return null;

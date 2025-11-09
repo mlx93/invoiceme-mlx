@@ -13,16 +13,16 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InvoiceStatusResponse {
-    private List<StatusBreakdown> breakdown;
+    private List<InvoiceStatusData> data; // Renamed from breakdown to match frontend
     
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class StatusBreakdown {
+    public static class InvoiceStatusData {
         private String status;
         private Integer count;
-        private Money totalAmount;
+        private Money amount; // Renamed from totalAmount to match frontend
     }
 }
 

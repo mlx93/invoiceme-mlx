@@ -19,11 +19,7 @@ public class ApproveUserHandler {
         User user = userRepository.findById(command.getUserId())
             .orElseThrow(() -> new IllegalArgumentException("User not found: " + command.getUserId()));
         
-        if (user.getStatus() != User.UserStatus.PENDING) {
-            throw new IllegalStateException("Can only approve PENDING users. Current status: " + user.getStatus());
-        }
-        
-        user.status = User.UserStatus.ACTIVE;
+        user.approve();
         User savedUser = userRepository.save(user);
         
         // Send approval email

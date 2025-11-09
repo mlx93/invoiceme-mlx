@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface RecurringInvoiceTemplateRepository extends JpaRepository<RecurringInvoiceTemplate, UUID> {
+public interface RecurringInvoiceTemplateRepository extends JpaRepository<RecurringInvoiceTemplate, UUID>, RecurringInvoiceTemplateRepositoryCustom {
     
     @Query("SELECT t FROM RecurringInvoiceTemplate t " +
            "WHERE t.status = 'ACTIVE' " +

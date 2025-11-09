@@ -14,7 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface CustomerRepository extends JpaRepository<Customer, UUID> {
+public interface CustomerRepository extends JpaRepository<Customer, UUID>, CustomerRepositoryCustom {
     
     Optional<Customer> findByEmail(String email);
     
@@ -24,15 +24,10 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
     
     Page<Customer> findByCustomerType(CustomerType customerType, Pageable pageable);
     
-    @Query("SELECT c FROM Customer c WHERE " +
-           "(:status IS NULL OR c.status = :status) AND " +
-           "(:customerType IS NULL OR c.customerType = :customerType) AND " +
-           "(:search IS NULL OR LOWER(c.companyName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           "LOWER(c.email.value) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Customer> findByFilters(
-        @Param("status") CustomerStatus status,
-        @Param("customerType") CustomerType customerType,
-        @Param("search") String search,
+        CustomerStatus status,
+        CustomerType customerType,
+        String search,
         Pageable pageable
     );
     

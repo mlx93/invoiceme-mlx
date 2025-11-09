@@ -13,12 +13,12 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DashboardMetricsResponse {
-    private Money revenueMTD; // Revenue month-to-date
+    private Money totalRevenueMTD; // Revenue month-to-date (renamed to match frontend)
     private Integer outstandingInvoicesCount;
     private Money outstandingInvoicesAmount;
     private Integer overdueInvoicesCount;
     private Money overdueInvoicesAmount;
-    private Integer activeCustomersCount;
+    private Integer activeCustomers; // Renamed from activeCustomersCount to match frontend
     private LocalDate asOfDate; // Date metrics were calculated
 }
 

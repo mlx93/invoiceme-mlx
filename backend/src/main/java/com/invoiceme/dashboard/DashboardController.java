@@ -40,11 +40,18 @@ public class DashboardController {
     public ResponseEntity<RevenueTrendResponse> getRevenueTrend(
             @RequestParam(required = false) java.time.LocalDate startDate,
             @RequestParam(required = false) java.time.LocalDate endDate,
-            @RequestParam(required = false) String period) {
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) Integer months) {
+        // Support both months parameter (from frontend) and explicit date range
+        java.time.LocalDate calculatedStartDate = startDate;
+        if (calculatedStartDate == null && months != null) {
+            calculatedStartDate = java.time.LocalDate.now().minusMonths(months);
+        }
+        
         GetRevenueTrendQuery query = GetRevenueTrendQuery.builder()
-            .startDate(startDate)
-            .endDate(endDate)
-            .period(period)
+            .startDate(calculatedStartDate)
+            .endDate(endDate != null ? endDate : java.time.LocalDate.now())
+            .period(period != null ? period : "MONTHLY")
             .build();
         RevenueTrendResponse response = getRevenueTrendHandler.handle(query);
         return ResponseEntity.ok(response);

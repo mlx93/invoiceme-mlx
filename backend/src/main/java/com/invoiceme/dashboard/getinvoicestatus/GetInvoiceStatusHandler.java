@@ -18,22 +18,22 @@ public class GetInvoiceStatusHandler {
     private final InvoiceRepository invoiceRepository;
     
     public InvoiceStatusResponse handle(GetInvoiceStatusQuery query) {
-        List<InvoiceStatusResponse.StatusBreakdown> breakdown = Arrays.stream(InvoiceStatus.values())
+        List<InvoiceStatusResponse.InvoiceStatusData> data = Arrays.stream(InvoiceStatus.values())
             .map(status -> {
                 long count = invoiceRepository.countByStatus(status);
                 var totalAmount = invoiceRepository.sumTotalAmountByStatus(status)
                     .orElse(java.math.BigDecimal.ZERO);
                 
-                return InvoiceStatusResponse.StatusBreakdown.builder()
+                return InvoiceStatusResponse.InvoiceStatusData.builder()
                     .status(status.name())
                     .count((int) count)
-                    .totalAmount(Money.of(totalAmount))
+                    .amount(Money.of(totalAmount)) // Changed from totalAmount to amount
                     .build();
             })
             .collect(Collectors.toList());
         
         return InvoiceStatusResponse.builder()
-            .breakdown(breakdown)
+            .data(data) // Changed from breakdown to data
             .build();
     }
 }

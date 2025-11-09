@@ -5,15 +5,15 @@ import com.invoiceme.domain.common.CustomerStatus;
 import com.invoiceme.domain.common.CustomerType;
 import com.invoiceme.domain.common.Money;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
 import java.util.UUID;
 
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 public class CustomerDto {

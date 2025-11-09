@@ -3,9 +3,12 @@ package com.invoiceme.customers.updatecustomer;
 import com.invoiceme.customers.shared.AddressDto;
 import com.invoiceme.customers.shared.CustomerDto;
 import com.invoiceme.domain.common.Address;
+import com.invoiceme.domain.common.Email;
 import com.invoiceme.domain.customer.Customer;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+
+import java.util.UUID;
 
 @Mapper(componentModel = "spring")
 public interface UpdateCustomerMapper {
@@ -15,6 +18,10 @@ public interface UpdateCustomerMapper {
     UpdateCustomerCommand toCommand(UUID customerId, UpdateCustomerRequest request);
     
     CustomerDto toDto(Customer customer);
+    
+    default String map(Email email) {
+        return email == null ? null : email.getValue();
+    }
     
     default Address toAddress(AddressDto dto) {
         if (dto == null) {

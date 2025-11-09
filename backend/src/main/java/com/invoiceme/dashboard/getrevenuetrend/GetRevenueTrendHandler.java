@@ -42,7 +42,7 @@ public class GetRevenueTrendHandler {
             org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE)
         ).getContent();
         
-        List<RevenueTrendResponse.RevenueDataPoint> dataPoints = new ArrayList<>();
+        List<RevenueTrendResponse.RevenueTrendData> data = new ArrayList<>();
         
         if ("MONTHLY".equals(period)) {
             // Group by month
@@ -52,38 +52,37 @@ public class GetRevenueTrendHandler {
                 ));
             
             byMonth.forEach((monthStr, monthInvoices) -> {
-                LocalDate month = LocalDate.parse(monthStr + "-01");
+                // Format as "YYYY-MM" to match frontend expectation
+                String month = monthStr.substring(0, 7); // Extract "YYYY-MM" from "YYYY-MM-DD"
                 Money revenue = monthInvoices.stream()
                     .map(Invoice::getTotalAmount)
                     .reduce(Money.zero(), Money::add);
-                dataPoints.add(RevenueTrendResponse.RevenueDataPoint.builder()
-                    .period(month)
+                data.add(RevenueTrendResponse.RevenueTrendData.builder()
+                    .month(month)
                     .revenue(revenue)
-                    .invoiceCount(monthInvoices.size())
                     .build());
             });
         } else if ("WEEKLY".equals(period)) {
             // Group by week
             Map<String, List<Invoice>> byWeek = invoices.stream()
                 .collect(Collectors.groupingBy(
-                    invoice -> invoice.getIssueDate().toString().substring(0, 10) // Simplified
+                    invoice -> invoice.getIssueDate().toString().substring(0, 7) // Group by month for weekly (simplified)
                 ));
             
             byWeek.forEach((weekStr, weekInvoices) -> {
-                LocalDate week = LocalDate.parse(weekStr);
+                String month = weekStr.substring(0, 7); // Format as "YYYY-MM"
                 Money revenue = weekInvoices.stream()
                     .map(Invoice::getTotalAmount)
                     .reduce(Money.zero(), Money::add);
-                dataPoints.add(RevenueTrendResponse.RevenueDataPoint.builder()
-                    .period(week)
+                data.add(RevenueTrendResponse.RevenueTrendData.builder()
+                    .month(month)
                     .revenue(revenue)
-                    .invoiceCount(weekInvoices.size())
                     .build());
             });
         }
         
         return RevenueTrendResponse.builder()
-            .dataPoints(dataPoints)
+            .data(data)
             .build();
     }
 }

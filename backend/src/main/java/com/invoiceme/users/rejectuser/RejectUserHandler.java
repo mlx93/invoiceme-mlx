@@ -19,11 +19,7 @@ public class RejectUserHandler {
         User user = userRepository.findById(command.getUserId())
             .orElseThrow(() -> new IllegalArgumentException("User not found: " + command.getUserId()));
         
-        if (user.getStatus() != User.UserStatus.PENDING) {
-            throw new IllegalStateException("Can only reject PENDING users. Current status: " + user.getStatus());
-        }
-        
-        user.status = User.UserStatus.INACTIVE;
+        user.reject();
         userRepository.save(user);
         
         // Send rejection email

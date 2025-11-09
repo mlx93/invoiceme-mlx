@@ -22,10 +22,11 @@ public class RegisterRequest {
     @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
     
-    @NotBlank(message = "First name is required")
-    private String firstName;
+    @NotBlank(message = "Full name is required")
+    private String fullName;
     
-    @NotBlank(message = "Last name is required")
+    // Optional: Support firstName/lastName for backward compatibility
+    private String firstName;
     private String lastName;
 }
 

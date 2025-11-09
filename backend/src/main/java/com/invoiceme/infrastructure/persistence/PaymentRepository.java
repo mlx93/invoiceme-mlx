@@ -16,7 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface PaymentRepository extends JpaRepository<Payment, UUID> {
+public interface PaymentRepository extends JpaRepository<Payment, UUID>, PaymentRepositoryCustom {
     
     Page<Payment> findByInvoiceId(UUID invoiceId, Pageable pageable);
     
@@ -26,20 +26,13 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
     
     Page<Payment> findByStatus(PaymentStatus status, Pageable pageable);
     
-    @Query("SELECT p FROM Payment p WHERE " +
-           "(:invoiceId IS NULL OR p.invoiceId = :invoiceId) AND " +
-           "(:customerId IS NULL OR p.customerId = :customerId) AND " +
-           "(:paymentDateFrom IS NULL OR p.paymentDate >= :paymentDateFrom) AND " +
-           "(:paymentDateTo IS NULL OR p.paymentDate <= :paymentDateTo) AND " +
-           "(:paymentMethod IS NULL OR p.paymentMethod = :paymentMethod) AND " +
-           "(:status IS NULL OR p.status = :status)")
     Page<Payment> findByFilters(
-        @Param("invoiceId") UUID invoiceId,
-        @Param("customerId") UUID customerId,
-        @Param("paymentDateFrom") LocalDate paymentDateFrom,
-        @Param("paymentDateTo") LocalDate paymentDateTo,
-        @Param("paymentMethod") PaymentMethod paymentMethod,
-        @Param("status") PaymentStatus status,
+        UUID invoiceId,
+        UUID customerId,
+        LocalDate paymentDateFrom,
+        LocalDate paymentDateTo,
+        PaymentMethod paymentMethod,
+        PaymentStatus status,
         Pageable pageable
     );
     
