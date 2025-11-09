@@ -18,6 +18,8 @@ public interface CreateInvoiceMapper {
     @Mapping(target = "lineItems", expression = "java(toLineItems(request.getLineItems()))")
     CreateInvoiceCommand requestToCommand(CreateInvoiceRequest request);
     
+    @Mapping(target = "invoiceNumber", expression = "java(map(invoice.getInvoiceNumber()))")
+    @Mapping(target = "customerName", ignore = true) // Not available in Invoice entity
     InvoiceDto toDto(com.invoiceme.domain.invoice.Invoice invoice);
     
     default String map(InvoiceNumber invoiceNumber) {

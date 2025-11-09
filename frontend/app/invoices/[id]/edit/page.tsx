@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -21,14 +21,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useCreateInvoice } from '@/hooks/useInvoices';
+import { useInvoice, useUpdateInvoice } from '@/hooks/useInvoices';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useAuth } from '@/contexts/AuthContext';
-import { canCreateInvoice } from '@/lib/rbac';
+import { canEditInvoice } from '@/lib/rbac';
 import { formatCurrency } from '@/lib/utils';
 import { PaymentTerms, DiscountType } from '@/types/common';
 
 const lineItemSchema = z.object({
+  id: z.string().uuid().optional(),
   description: z.string().min(1, 'Description is required'),
   quantity: z.number().min(1, 'Quantity must be at least 1'),
   unitPrice: z.number().min(0, 'Unit price must be 0 or greater'),
@@ -63,11 +64,14 @@ function calculateLineTotal(item: z.infer<typeof lineItemSchema>): number {
   return taxableAmount + taxAmount;
 }
 
-export default function CreateInvoicePage() {
+export default function EditInvoicePage() {
   const router = useRouter();
+  const params = useParams();
+  const invoiceId = params.id as string;
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { createInvoice, loading, error } = useCreateInvoice();
-  const { customers } = useCustomers({ size: 1000 }); // Get all customers for dropdown
+  const { invoice, loading: fetchLoading, error: fetchError } = useInvoice(invoiceId);
+  const { updateInvoice, loading, error } = useUpdateInvoice();
+  const { customers } = useCustomers({ size: 1000 });
 
   const {
     register,
@@ -75,6 +79,7 @@ export default function CreateInvoicePage() {
     control,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<InvoiceFormData>({
     resolver: zodResolver(invoiceSchema),
@@ -102,6 +107,35 @@ export default function CreateInvoicePage() {
   const paymentTerms = watch('paymentTerms');
   const issueDate = watch('issueDate');
   const lineItems = watch('lineItems');
+
+  // Populate form with existing invoice data
+  useEffect(() => {
+    if (invoice) {
+      reset({
+        customerId: invoice.customerId,
+        issueDate: invoice.issueDate,
+        dueDate: invoice.dueDate || '',
+        paymentTerms: invoice.paymentTerms,
+        notes: invoice.notes || '',
+        lineItems: invoice.lineItems?.map((item: any) => ({
+          id: item.id,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice?.amount || item.unitPrice || 0,
+          discountType: item.discountType || 'NONE',
+          discountValue: item.discountValue?.amount || item.discountValue || 0,
+          taxRate: item.taxRate || 0,
+        })) || [{
+          description: '',
+          quantity: 1,
+          unitPrice: 0,
+          discountType: 'NONE',
+          discountValue: 0,
+          taxRate: 0,
+        }],
+      });
+    }
+  }, [invoice, reset]);
 
   // Calculate due date based on payment terms
   useEffect(() => {
@@ -146,14 +180,14 @@ export default function CreateInvoicePage() {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push('/login');
-    } else if (user && !canCreateInvoice(user.role)) {
-      router.push('/invoices');
+    } else if (invoice && user && !canEditInvoice(user.role, invoice.status)) {
+      router.push(`/invoices/${invoiceId}`);
     }
-  }, [authLoading, isAuthenticated, user, router]);
+  }, [authLoading, isAuthenticated, user, invoice, invoiceId, router]);
 
   const onSubmit = async (data: InvoiceFormData) => {
     try {
-      const invoice = await createInvoice({
+      await updateInvoice(invoiceId, {
         customerId: data.customerId,
         issueDate: data.issueDate,
         dueDate: data.dueDate,
@@ -168,13 +202,13 @@ export default function CreateInvoicePage() {
         })),
         notes: data.notes,
       });
-      router.push(`/invoices/${invoice.id}`);
+      router.push(`/invoices/${invoiceId}`);
     } catch (err) {
       // Error handled by hook
     }
   };
 
-  if (authLoading || !isAuthenticated) {
+  if (authLoading || !isAuthenticated || fetchLoading) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-64">
@@ -184,10 +218,30 @@ export default function CreateInvoicePage() {
     );
   }
 
+  if (fetchError) {
+    return (
+      <Layout>
+        <Alert variant="destructive">
+          <AlertDescription>{fetchError}</AlertDescription>
+        </Alert>
+      </Layout>
+    );
+  }
+
+  if (invoice && invoice.status !== 'DRAFT') {
+    return (
+      <Layout>
+        <Alert variant="destructive">
+          <AlertDescription>Only draft invoices can be edited.</AlertDescription>
+        </Alert>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="max-w-6xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold">Create Invoice</h1>
+        <h1 className="text-3xl font-bold">Edit Invoice</h1>
 
         {error && (
           <Alert variant="destructive">
@@ -205,6 +259,7 @@ export default function CreateInvoicePage() {
                 <div>
                   <Label htmlFor="customerId">Customer *</Label>
                   <Select
+                    value={watch('customerId') || undefined}
                     onValueChange={(value) => setValue('customerId', value)}
                   >
                     <SelectTrigger className="mt-1">
@@ -239,7 +294,7 @@ export default function CreateInvoicePage() {
                 <div>
                   <Label htmlFor="paymentTerms">Payment Terms *</Label>
                   <Select
-                    value={paymentTerms}
+                    value={paymentTerms || 'NET_30'}
                     onValueChange={(value) => setValue('paymentTerms', value as PaymentTerms)}
                   >
                     <SelectTrigger className="mt-1">
@@ -474,7 +529,7 @@ export default function CreateInvoicePage() {
 
           <div className="flex gap-4">
             <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Invoice'}
+              {loading ? 'Updating...' : 'Update Invoice'}
             </Button>
             <Button type="button" variant="outline" onClick={() => router.back()}>
               Cancel

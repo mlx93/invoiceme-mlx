@@ -26,7 +26,7 @@ public class Money {
     private BigDecimal amount;
     
     @jakarta.persistence.Transient
-    private String currency; // Not persisted - always USD in database
+    private String currency = DEFAULT_CURRENCY.getCurrencyCode(); // Not persisted - always USD in database
     
     private Money(BigDecimal amount, Currency currency) {
         if (amount == null) {

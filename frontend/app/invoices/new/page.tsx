@@ -21,7 +21,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useCreateInvoice } from '@/hooks/useInvoices';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useCreateInvoice, useMarkInvoiceAsSent } from '@/hooks/useInvoices';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useAuth } from '@/contexts/AuthContext';
 import { canCreateInvoice } from '@/lib/rbac';
@@ -67,7 +75,10 @@ export default function CreateInvoicePage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { createInvoice, loading, error } = useCreateInvoice();
+  const { markAsSent, loading: sendingInvoice } = useMarkInvoiceAsSent();
   const { customers } = useCustomers({ size: 1000 }); // Get all customers for dropdown
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [createdInvoiceId, setCreatedInvoiceId] = useState<string | null>(null);
 
   const {
     register,
@@ -168,10 +179,34 @@ export default function CreateInvoicePage() {
         })),
         notes: data.notes,
       });
-      router.push(`/invoices/${invoice.id}`);
+      setCreatedInvoiceId(invoice.id);
+      setSuccessDialogOpen(true);
     } catch (err) {
       // Error handled by hook
     }
+  };
+
+  const handleSendInvoice = async () => {
+    if (!createdInvoiceId) return;
+    try {
+      await markAsSent(createdInvoiceId);
+      setSuccessDialogOpen(false);
+      router.push(`/invoices/${createdInvoiceId}`);
+    } catch (err) {
+      // Error handled by hook
+    }
+  };
+
+  const handleViewInvoice = () => {
+    if (!createdInvoiceId) return;
+    setSuccessDialogOpen(false);
+    router.push(`/invoices/${createdInvoiceId}`);
+  };
+
+  const handleCreateAnother = () => {
+    setSuccessDialogOpen(false);
+    setCreatedInvoiceId(null);
+    router.refresh();
   };
 
   if (authLoading || !isAuthenticated) {
@@ -481,6 +516,29 @@ export default function CreateInvoicePage() {
             </Button>
           </div>
         </form>
+
+        {/* Success Modal */}
+        <Dialog open={successDialogOpen} onOpenChange={setSuccessDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Invoice Created Successfully!</DialogTitle>
+              <DialogDescription>
+                Your invoice has been created as a draft. Would you like to send it to the customer now?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button onClick={handleSendInvoice} disabled={sendingInvoice}>
+                {sendingInvoice ? 'Sending...' : 'Send to Customer'}
+              </Button>
+              <Button variant="outline" onClick={handleViewInvoice}>
+                View Invoice
+              </Button>
+              <Button variant="ghost" onClick={handleCreateAnother}>
+                Create Another
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
