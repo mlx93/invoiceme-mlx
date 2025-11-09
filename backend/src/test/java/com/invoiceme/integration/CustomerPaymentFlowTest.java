@@ -68,7 +68,7 @@ public class CustomerPaymentFlowTest {
             Money.of(100.00),
             com.invoiceme.domain.common.DiscountType.NONE,
             Money.zero(),
-            java.math.BigDecimal.valueOf(0.10), // 10% tax
+            java.math.BigDecimal.valueOf(10), // 10% tax (passed as whole number, domain divides by 100)
             0
         ));
         
@@ -76,8 +76,8 @@ public class CustomerPaymentFlowTest {
         
         // Verify invoice totals
         assertThat(invoice.getSubtotal().getAmount()).isEqualByComparingTo(java.math.BigDecimal.valueOf(200.00));
-        assertThat(invoice.getTaxAmount().getAmount()).isEqualByComparingTo(java.math.BigDecimal.valueOf(20.00));
-        assertThat(invoice.getTotalAmount().getAmount()).isEqualByComparingTo(java.math.BigDecimal.valueOf(220.00));
+        assertThat(invoice.getTaxAmount().getAmount()).isEqualByComparingTo(java.math.BigDecimal.valueOf(20.00)); // 200 * (10/100) = 20
+        assertThat(invoice.getTotalAmount().getAmount()).isEqualByComparingTo(java.math.BigDecimal.valueOf(220.00)); // 200 + 20
         assertThat(invoice.getBalanceDue().getAmount()).isEqualByComparingTo(java.math.BigDecimal.valueOf(220.00));
         
         // Step 2: Mark Invoice as Sent
@@ -88,7 +88,7 @@ public class CustomerPaymentFlowTest {
         assertThat(invoice.getSentDate()).isNotNull();
         
         // Step 3: Record Payment
-        Money paymentAmount = Money.of(220.00);
+        Money paymentAmount = Money.of(220.00); // Full payment amount
         Payment payment = Payment.record(
             invoice,
             customer,
