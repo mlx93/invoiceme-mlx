@@ -11,6 +11,25 @@
 3. [Environment Variables](#environment-variables)
 4. [Post-Deployment Verification](#post-deployment-verification)
 5. [Troubleshooting](#troubleshooting)
+6. [Related Documentation](#related-documentation)
+
+---
+
+## 🎉 Backend Deployment Status
+
+**✅ BACKEND DEPLOYED & OPERATIONAL**
+
+- **Live URL**: `http://invoiceme-mlx-back-env.eba-jj8c3aur.us-east-1.elasticbeanstalk.com`
+- **Health Check**: ✅ `{"status":"UP"}`
+- **Status**: Fully operational since deployment
+
+**See**: [`BACKEND_DEPLOYMENT_SUCCESS.md`](./BACKEND_DEPLOYMENT_SUCCESS.md) for complete deployment details and troubleshooting guide.
+
+**Key Learnings**: 
+- Use **Supabase Connection Pooler** for AWS deployments (not direct connection)
+- See [`SUPABASE_CONNECTION_GUIDE.md`](./SUPABASE_CONNECTION_GUIDE.md) for connection details
+
+---
 
 ---
 
@@ -553,6 +572,30 @@ Ensure these secrets are configured in GitHub (Settings → Secrets and variable
 - Set up AWS Cost Explorer alerts
 - Monitor CloudWatch log storage
 - Review Amplify build minutes usage
+
+---
+
+## Related Documentation
+
+### Deployment Success & Troubleshooting
+
+- **[BACKEND_DEPLOYMENT_SUCCESS.md](./BACKEND_DEPLOYMENT_SUCCESS.md)** - Complete backend deployment success story, root cause analysis, and solution
+- **[SUPABASE_CONNECTION_GUIDE.md](./SUPABASE_CONNECTION_GUIDE.md)** - Comprehensive guide for Supabase connection methods (direct vs pooler)
+- **[AWS_DEPLOYMENT_QUICK_START.md](./AWS_DEPLOYMENT_QUICK_START.md)** - Quick start guide for AWS deployment
+- **[TROUBLESHOOT_ENVIRONMENT_STARTUP.md](./TROUBLESHOOT_ENVIRONMENT_STARTUP.md)** - Common startup issues and solutions
+
+### Configuration Files
+
+- **[ELASTIC_BEANSTALK_ENV_VARS.md](./ELASTIC_BEANSTALK_ENV_VARS.md)** - Complete list of environment variables for Elastic Beanstalk
+- **[CREATE_NEW_ENVIRONMENT_ENV1.md](./CREATE_NEW_ENVIRONMENT_ENV1.md)** - Step-by-step guide for creating new Elastic Beanstalk environment
+
+### Key Learnings
+
+**Critical**: For AWS deployments, always use **Supabase Connection Pooler**, not direct connection:
+- Direct connection: `db.PROJECT_ID.supabase.co` (does NOT resolve externally)
+- Pooler connection: `aws-1-us-east-1.pooler.supabase.com` (resolves to public IPs)
+
+See [SUPABASE_CONNECTION_GUIDE.md](./SUPABASE_CONNECTION_GUIDE.md) for details.
 
 ---
 
