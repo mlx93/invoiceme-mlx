@@ -87,7 +87,6 @@ export default function EditCustomerPage() {
       await updateCustomer(customerId, {
         companyName: data.companyName,
         contactName: data.contactName,
-        email: data.email,
         phone: data.phone,
         customerType: data.customerType,
         ...(hasAddress && {
@@ -157,10 +156,8 @@ export default function EditCustomerPage() {
 
             <div>
               <Label htmlFor="email">Email *</Label>
-              <Input id="email" type="email" {...register('email')} className="mt-1" />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-              )}
+              <Input id="email" type="email" {...register('email')} className="mt-1" disabled />
+              <p className="mt-1 text-sm text-gray-500">Email cannot be changed</p>
             </div>
 
             <div>

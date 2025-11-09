@@ -64,6 +64,8 @@ jobs:
 
   deploy-frontend:
     name: Deploy Frontend to Vercel
+    # Vercel's GitHub integration auto-deploys on push. Disable this job.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     needs: deploy-backend
     
