@@ -8,8 +8,8 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ELASTIC_BEANSTALK_APP_NAME: invoiceme-backend
-  ELASTIC_BEANSTALK_ENV_NAME: invoiceme-backend-prod
+  ELASTIC_BEANSTALK_APP_NAME: invoiceme-mlx-back
+  ELASTIC_BEANSTALK_ENV_NAME: Invoiceme-mlx-back-env
 
 jobs:
   deploy-backend:
@@ -54,7 +54,7 @@ jobs:
           environment_name: ${{ env.ELASTIC_BEANSTALK_ENV_NAME }}
           version_label: ${{ github.sha }}-${{ github.run_number }}
           region: ${{ env.AWS_REGION }}
-          deployment_package: backend/target/invoiceme-backend-1.0.0-SNAPSHOT.jar
+          deployment_package: backend/target/invoiceme-backend-2.0.0.jar
           wait_for_environment_update: true
           use_existing_version_if_available: true
       
