@@ -122,28 +122,54 @@ export default function EditInvoicePage() {
   // Populate form with existing invoice data
   useEffect(() => {
     if (invoice) {
+      console.log('=== POPULATING FORM WITH INVOICE DATA ===');
+      console.log('Raw invoice:', invoice);
+      console.log('Raw line items:', invoice.lineItems);
+      
+      const formattedLineItems = invoice.lineItems?.map((item: any) => {
+        console.log('Processing line item:', item);
+        
+        // Safely extract numeric values from Money objects or direct values
+        const quantity = typeof item.quantity === 'number' ? item.quantity : Number(item.quantity) || 1;
+        const unitPrice = item.unitPrice?.amount ?? item.unitPrice ?? 0;
+        const discountValue = item.discountValue?.amount ?? item.discountValue ?? 0;
+        const taxRate = typeof item.taxRate === 'number' ? item.taxRate : Number(item.taxRate) || 0;
+        
+        const formatted = {
+          id: item.id,
+          description: item.description || '',
+          quantity: Number(quantity),
+          unitPrice: Number(unitPrice),
+          discountType: item.discountType || 'NONE',
+          discountValue: Number(discountValue),
+          taxRate: Number(taxRate),
+        };
+        
+        console.log('Formatted line item:', formatted);
+        console.log('  - quantity type:', typeof formatted.quantity, 'value:', formatted.quantity);
+        console.log('  - unitPrice type:', typeof formatted.unitPrice, 'value:', formatted.unitPrice);
+        console.log('  - discountValue type:', typeof formatted.discountValue, 'value:', formatted.discountValue);
+        console.log('  - taxRate type:', typeof formatted.taxRate, 'value:', formatted.taxRate);
+        
+        return formatted;
+      }) || [{
+        description: '',
+        quantity: 1,
+        unitPrice: 0,
+        discountType: 'NONE',
+        discountValue: 0,
+        taxRate: 0,
+      }];
+      
+      console.log('All formatted line items:', formattedLineItems);
+      
       reset({
         customerId: invoice.customerId,
         issueDate: invoice.issueDate,
         dueDate: invoice.dueDate || '',
         paymentTerms: invoice.paymentTerms,
         notes: invoice.notes || '',
-        lineItems: invoice.lineItems?.map((item: any) => ({
-          id: item.id,
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice?.amount || item.unitPrice || 0,
-          discountType: item.discountType || 'NONE',
-          discountValue: item.discountValue?.amount || item.discountValue || 0,
-          taxRate: item.taxRate || 0,
-        })) || [{
-          description: '',
-          quantity: 1,
-          unitPrice: 0,
-          discountType: 'NONE',
-          discountValue: 0,
-          taxRate: 0,
-        }],
+        lineItems: formattedLineItems,
       });
     }
   }, [invoice, reset]);
@@ -197,9 +223,20 @@ export default function EditInvoicePage() {
   }, [authLoading, isAuthenticated, user, invoice, invoiceId, router]);
 
   const onSubmit = async (data: InvoiceFormData) => {
+    console.log('=== EDIT INVOICE: onSubmit called ===');
+    console.log('Form data:', data);
+    console.log('Invoice ID:', invoiceId);
+    console.log('Invoice version:', invoice?.version);
+    
+    if (!invoice?.version) {
+      console.error('ERROR: Invoice version is missing!');
+      return;
+    }
+    
     try {
-      await updateInvoice(invoiceId, {
-        customerId: data.customerId,
+      console.log('Calling updateInvoice...');
+      
+      const updatePayload = {
         issueDate: data.issueDate,
         dueDate: data.dueDate,
         paymentTerms: data.paymentTerms,
@@ -212,9 +249,30 @@ export default function EditInvoicePage() {
           taxRate: item.taxRate,
         })),
         notes: data.notes,
-      });
+        version: invoice.version, // Required for optimistic locking
+      };
+      
+      console.log('Update payload being sent to backend:', updatePayload);
+      console.log('Line items in payload:', updatePayload.lineItems);
+      console.log('Number of line items:', updatePayload.lineItems.length);
+      console.log('First line item details:', JSON.stringify(updatePayload.lineItems[0], null, 2));
+      console.log('Full payload as JSON:', JSON.stringify(updatePayload, null, 2));
+      
+      const updatedInvoice = await updateInvoice(invoiceId, updatePayload);
+      console.log('Update successful:', updatedInvoice);
+      console.log('Opening success dialog...');
       setSuccessDialogOpen(true);
+      console.log('Success dialog state set to true');
     } catch (err) {
+      console.error('=== EDIT INVOICE: Error in onSubmit ===', err);
+      
+      // Log detailed error information
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as any;
+        console.error('Backend response status:', axiosError.response?.status);
+        console.error('Backend response data:', axiosError.response?.data);
+        console.error('Backend error message:', axiosError.response?.data?.message || axiosError.message);
+      }
       // Error handled by hook
     }
   };
@@ -279,7 +337,48 @@ export default function EditInvoicePage() {
           </Alert>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={(e) => {
+          console.log('=== FORM onSubmit EVENT FIRED ===');
+          e.preventDefault(); // Prevent default first
+          
+          // Manually call handleSubmit and see what happens
+          const submitHandler = handleSubmit(
+            (data) => {
+              console.log('=== VALIDATION PASSED ===');
+              console.log('Validated data:', data);
+              onSubmit(data);
+            },
+            (errors) => {
+              console.log('=== VALIDATION FAILED ===');
+              console.error('Validation errors:', errors);
+              
+              // Show specific field errors
+              if (errors.lineItems) {
+                console.error('Line item errors:', errors.lineItems);
+                if (Array.isArray(errors.lineItems)) {
+                  errors.lineItems.forEach((itemError, index) => {
+                    if (itemError) {
+                      console.error(`Line item ${index} errors:`, {
+                        description: itemError.description?.message,
+                        quantity: itemError.quantity?.message,
+                        unitPrice: itemError.unitPrice?.message,
+                        discountValue: itemError.discountValue?.message,
+                        taxRate: itemError.taxRate?.message,
+                      });
+                    }
+                  });
+                } else {
+                  console.error('Line items root error:', errors.lineItems.message);
+                }
+              }
+              if (errors.customerId) console.error('Customer ID error:', errors.customerId.message);
+              if (errors.issueDate) console.error('Issue date error:', errors.issueDate.message);
+              if (errors.paymentTerms) console.error('Payment terms error:', errors.paymentTerms.message);
+            }
+          );
+          
+          submitHandler(e);
+        }} className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
@@ -558,7 +657,17 @@ export default function EditInvoicePage() {
           </Card>
 
           <div className="flex gap-4">
-            <Button type="submit" disabled={loading}>
+            <Button 
+              type="submit" 
+              disabled={loading}
+              onClick={(e) => {
+                console.log('=== UPDATE BUTTON CLICKED ===');
+                console.log('Button disabled?', loading);
+                console.log('Form errors:', errors);
+                console.log('Invoice data:', invoice);
+                console.log('Invoice version:', invoice?.version);
+              }}
+            >
               {loading ? 'Updating...' : 'Update Invoice'}
             </Button>
             <Button type="button" variant="outline" onClick={() => router.back()}>

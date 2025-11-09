@@ -150,7 +150,7 @@ export default function InvoiceDetailPage() {
             {invoice.status === 'DRAFT' && canEdit && (
               <Dialog open={markSentDialogOpen} onOpenChange={setMarkSentDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button>Mark as Sent</Button>
+                  <Button>Send to Customer</Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
@@ -165,7 +165,7 @@ export default function InvoiceDetailPage() {
                       Cancel
                     </Button>
                     <Button onClick={handleMarkAsSent} disabled={markingSent}>
-                      {markingSent ? 'Marking...' : 'Mark as Sent'}
+                      {markingSent ? 'Sending...' : 'Send to Customer'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>

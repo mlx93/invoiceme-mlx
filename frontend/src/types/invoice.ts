@@ -24,7 +24,7 @@ export interface UpdateInvoiceRequest {
   paymentTerms?: PaymentTerms;
   lineItems?: LineItemDTO[];
   notes?: string;
-  version?: number;
+  version: number; // Required for optimistic locking
 }
 
 export interface LineItemResponse {
@@ -72,5 +72,6 @@ export interface InvoiceDetailResponse extends InvoiceResponse {
   paidDate?: string;
   payments: PaymentSummary[];
   pdfUrl: string;
+  version: number; // For optimistic locking
 }
 

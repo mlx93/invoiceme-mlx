@@ -114,6 +114,7 @@ public class InvoiceController {
                 })
                 .collect(Collectors.toList()))
             .pdfUrl(null) // Will be generated later
+            .version(result.getInvoice().getVersion()) // Include version for optimistic locking
             .build();
         
         return ResponseEntity.ok(response);

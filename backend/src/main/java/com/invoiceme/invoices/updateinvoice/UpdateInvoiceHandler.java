@@ -42,14 +42,20 @@ public class UpdateInvoiceHandler {
             
             // Update line items
             if (command.getLineItems() != null && !command.getLineItems().isEmpty()) {
-                // Remove all existing line items
-                var existingItems = new java.util.ArrayList<>(invoice.getLineItems());
-                for (LineItem item : existingItems) {
-                    invoice.removeLineItem(item.getId());
-                }
-                // Add new line items
+                // Capture existing items BEFORE making changes (only items with IDs - persisted items)
+                var existingItemIds = invoice.getLineItems().stream()
+                    .filter(item -> item.getId() != null)
+                    .map(LineItem::getId)
+                    .collect(java.util.stream.Collectors.toList());
+                
+                // Add new line items FIRST
                 for (LineItem lineItem : command.getLineItems()) {
                     invoice.addLineItem(lineItem);
+                }
+                
+                // Then remove all OLD line items (only the persisted ones we captured)
+                for (java.util.UUID itemId : existingItemIds) {
+                    invoice.removeLineItem(itemId);
                 }
             }
             
@@ -59,14 +65,20 @@ public class UpdateInvoiceHandler {
         } else if (invoice.getStatus() == InvoiceStatus.SENT) {
             // SENT: Only line items editable (with version tracking)
             if (command.getLineItems() != null && !command.getLineItems().isEmpty()) {
-                // Remove all existing line items
-                var existingItems = new java.util.ArrayList<>(invoice.getLineItems());
-                for (LineItem item : existingItems) {
-                    invoice.removeLineItem(item.getId());
-                }
-                // Add new line items
+                // Capture existing items BEFORE making changes (only items with IDs - persisted items)
+                var existingItemIds = invoice.getLineItems().stream()
+                    .filter(item -> item.getId() != null)
+                    .map(LineItem::getId)
+                    .collect(java.util.stream.Collectors.toList());
+                
+                // Add new line items FIRST
                 for (LineItem lineItem : command.getLineItems()) {
                     invoice.addLineItem(lineItem);
+                }
+                
+                // Then remove all OLD line items (only the persisted ones we captured)
+                for (java.util.UUID itemId : existingItemIds) {
+                    invoice.removeLineItem(itemId);
                 }
             }
         } else {

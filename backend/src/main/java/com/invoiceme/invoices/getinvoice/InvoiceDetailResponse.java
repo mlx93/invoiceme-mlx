@@ -39,5 +39,6 @@ public class InvoiceDetailResponse {
     private Instant paidDate;
     private List<PaymentSummaryDto> payments;
     private String pdfUrl; // Will be generated later
+    private Integer version; // For optimistic locking
 }
 
