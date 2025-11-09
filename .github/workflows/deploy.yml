@@ -63,7 +63,7 @@ jobs:
           echo "Backend deployment completed. Check Elastic Beanstalk console for status."
 
   deploy-frontend:
-    name: Deploy Frontend to Amplify
+    name: Deploy Frontend to Elastic Beanstalk
     runs-on: ubuntu-latest
     needs: deploy-backend
     
@@ -96,6 +96,11 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
       
+      - name: Create deployment package
+        run: |
+          cd frontend
+          zip -r ../frontend-deploy.zip . -x "node_modules/*" -x ".next/cache/*" -x ".git/*"
+      
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -103,9 +108,20 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
       
-      - name: Trigger Amplify deployment
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v22
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: invoiceme-mlx
+          environment_name: Invoiceme-mlx-env
+          version_label: frontend-${{ github.sha }}-${{ github.run_number }}
+          region: ${{ env.AWS_REGION }}
+          deployment_package: frontend-deploy.zip
+          wait_for_deployment: true
+          use_existing_version_if_available: true
+      
+      - name: Verify frontend deployment
         run: |
-          echo "Frontend will be automatically deployed by AWS Amplify via GitHub integration."
-          echo "If manual trigger is needed, use AWS CLI:"
-          echo "aws amplify start-job --app-id [APP_ID] --branch-name main --job-type RELEASE"
+          echo "Frontend deployment completed. Check Elastic Beanstalk console for status."
 
