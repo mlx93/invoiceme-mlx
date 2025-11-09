@@ -35,6 +35,12 @@ public class InvoiceStateTransitionTest {
     private PaymentRepository paymentRepository;
     
     private Customer customer;
+    private static long invoiceNumberCounter = System.nanoTime() + 30000;
+    
+    private InvoiceNumber generateUniqueInvoiceNumber() {
+        // Use nanoTime modulo to get a unique sequence number per test run
+        return InvoiceNumber.generate((int)((invoiceNumberCounter++ % 9999) + 1));
+    }
     
     @BeforeEach
     void setUp() {
@@ -51,7 +57,7 @@ public class InvoiceStateTransitionTest {
         // Create draft invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -84,7 +90,7 @@ public class InvoiceStateTransitionTest {
         // Create and send invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -111,11 +117,10 @@ public class InvoiceStateTransitionTest {
             Money.of(100.00),
             PaymentMethod.CREDIT_CARD,
             LocalDate.now(),
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         paymentRepository.save(payment);
-        
-        invoice.recordPayment(Money.of(100.00));
+        // Payment.record() already calls invoice.recordPayment(), just save the invoice
         invoice = invoiceRepository.save(invoice);
         
         // Verify
@@ -133,7 +138,7 @@ public class InvoiceStateTransitionTest {
         // Create draft invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -165,7 +170,7 @@ public class InvoiceStateTransitionTest {
         // Create and send invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -198,7 +203,7 @@ public class InvoiceStateTransitionTest {
         // Create and send invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -230,7 +235,7 @@ public class InvoiceStateTransitionTest {
         // Create, send, and pay invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -264,7 +269,7 @@ public class InvoiceStateTransitionTest {
         // Create and cancel invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -297,7 +302,7 @@ public class InvoiceStateTransitionTest {
         // Create and cancel invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -337,7 +342,7 @@ public class InvoiceStateTransitionTest {
         // Create and send invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -363,7 +368,7 @@ public class InvoiceStateTransitionTest {
             Money.of(400.00),
             PaymentMethod.CREDIT_CARD,
             LocalDate.now(),
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         paymentRepository.save(payment);
         

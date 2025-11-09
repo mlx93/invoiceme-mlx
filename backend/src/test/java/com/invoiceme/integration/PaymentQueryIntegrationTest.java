@@ -39,6 +39,12 @@ public class PaymentQueryIntegrationTest {
     
     private Customer customer;
     private Invoice invoice;
+    private static long invoiceNumberCounter = System.nanoTime() + 10000;
+    
+    private InvoiceNumber generateUniqueInvoiceNumber() {
+        // Use nanoTime modulo to get a unique sequence number per test run
+        return InvoiceNumber.generate((int)((invoiceNumberCounter++ % 9999) + 1));
+    }
     
     @BeforeEach
     void setUp() {
@@ -53,7 +59,7 @@ public class PaymentQueryIntegrationTest {
         // Create test invoice
         invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -82,7 +88,7 @@ public class PaymentQueryIntegrationTest {
             Money.of(500.00),
             PaymentMethod.CREDIT_CARD,
             LocalDate.now(),
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         payment = paymentRepository.save(payment);
         UUID paymentId = payment.getId();
@@ -110,11 +116,14 @@ public class PaymentQueryIntegrationTest {
             Money.of(300.00),
             PaymentMethod.CREDIT_CARD,
             LocalDate.now(),
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         payment1 = paymentRepository.save(payment1);
-        invoice.recordPayment(Money.of(300.00));
+        // Payment.record() already calls invoice.recordPayment(), just save the invoice
         invoice = invoiceRepository.save(invoice);
+        
+        // Reload invoice to get updated status
+        invoice = invoiceRepository.findById(invoice.getId()).orElseThrow();
         
         Payment payment2 = Payment.record(
             invoice,
@@ -122,22 +131,26 @@ public class PaymentQueryIntegrationTest {
             Money.of(400.00),
             PaymentMethod.ACH,
             LocalDate.now(),
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         payment2 = paymentRepository.save(payment2);
-        invoice.recordPayment(Money.of(400.00));
+        // Payment.record() already calls invoice.recordPayment(), just save the invoice
         invoice = invoiceRepository.save(invoice);
         
+        // Reload invoice to get updated status
+        invoice = invoiceRepository.findById(invoice.getId()).orElseThrow();
+        
+        // Record third payment (invoice total is $1000, so $300 + $400 + $300 = $1000, all should be recordable)
         Payment payment3 = Payment.record(
             invoice,
             customer,
             Money.of(300.00),
             PaymentMethod.ACH,
             LocalDate.now(),
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         payment3 = paymentRepository.save(payment3);
-        invoice.recordPayment(Money.of(300.00));
+        // Payment.record() already calls invoice.recordPayment(), just save the invoice
         invoice = invoiceRepository.save(invoice);
         
         // Query payments for invoice
@@ -161,7 +174,7 @@ public class PaymentQueryIntegrationTest {
         // Create second invoice for same customer
         Invoice invoice2 = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(2),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -185,7 +198,7 @@ public class PaymentQueryIntegrationTest {
             Money.of(500.00),
             PaymentMethod.CREDIT_CARD,
             LocalDate.now(),
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         payment1 = paymentRepository.save(payment1);
         
@@ -195,7 +208,7 @@ public class PaymentQueryIntegrationTest {
             Money.of(750.00),
             PaymentMethod.ACH,
             LocalDate.now(),
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         payment2 = paymentRepository.save(payment2);
         
@@ -223,7 +236,7 @@ public class PaymentQueryIntegrationTest {
             Money.of(200.00),
             PaymentMethod.CREDIT_CARD,
             LocalDate.now(),
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         creditCardPayment = paymentRepository.save(creditCardPayment);
         
@@ -233,7 +246,7 @@ public class PaymentQueryIntegrationTest {
             Money.of(300.00),
             PaymentMethod.ACH,
             LocalDate.now(),
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         achPayment = paymentRepository.save(achPayment);
         
@@ -243,7 +256,7 @@ public class PaymentQueryIntegrationTest {
             Money.of(150.00),
             PaymentMethod.ACH,
             LocalDate.now(),
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         achPayment2 = paymentRepository.save(achPayment2);
         
@@ -279,7 +292,7 @@ public class PaymentQueryIntegrationTest {
             Money.of(100.00),
             PaymentMethod.CREDIT_CARD,
             startDate.minusDays(10), // Outside range
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         oldPayment = paymentRepository.save(oldPayment);
         
@@ -289,7 +302,7 @@ public class PaymentQueryIntegrationTest {
             Money.of(200.00),
             PaymentMethod.CREDIT_CARD,
             LocalDate.now(), // Within range
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         recentPayment = paymentRepository.save(recentPayment);
         
@@ -322,7 +335,7 @@ public class PaymentQueryIntegrationTest {
             Money.of(250.00),
             PaymentMethod.CREDIT_CARD,
             LocalDate.now(),
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         paymentRepository.save(payment1);
         
@@ -332,7 +345,7 @@ public class PaymentQueryIntegrationTest {
             Money.of(350.00),
             PaymentMethod.ACH,
             LocalDate.now(),
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         paymentRepository.save(payment2);
         
@@ -342,7 +355,7 @@ public class PaymentQueryIntegrationTest {
             Money.of(400.00),
             PaymentMethod.ACH,
             LocalDate.now(),
-            UUID.randomUUID()
+            null // createdByUserId - can be null for tests
         );
         paymentRepository.save(payment3);
         

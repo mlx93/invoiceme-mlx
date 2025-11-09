@@ -163,7 +163,7 @@ public class Invoice extends AggregateRoot {
     // Behavior methods
     
     public void addLineItem(LineItem lineItem) {
-        if (status == InvoiceStatus.PAID || status == InvoiceStatus.CANCELLED) {
+        if (status == InvoiceStatus.PAID || status == InvoiceStatus.CANCELLED || status == InvoiceStatus.SENT) {
             throw new IllegalStateException("Cannot add line items to " + status + " invoice");
         }
         
@@ -174,7 +174,7 @@ public class Invoice extends AggregateRoot {
     }
     
     public void removeLineItem(UUID lineItemId) {
-        if (status == InvoiceStatus.PAID || status == InvoiceStatus.CANCELLED) {
+        if (status == InvoiceStatus.PAID || status == InvoiceStatus.CANCELLED || status == InvoiceStatus.SENT) {
             throw new IllegalStateException("Cannot remove line items from " + status + " invoice");
         }
         
@@ -453,11 +453,14 @@ public class Invoice extends AggregateRoot {
     }
     
     public void updateNotes(String notes) {
+        if (status == InvoiceStatus.PAID || status == InvoiceStatus.CANCELLED || status == InvoiceStatus.SENT) {
+            throw new IllegalStateException("Cannot update notes for " + status + " invoice");
+        }
         this.notes = notes;
     }
     
     public void updateDates(LocalDate issueDate, LocalDate dueDate) {
-        if (status == InvoiceStatus.PAID || status == InvoiceStatus.CANCELLED) {
+        if (status == InvoiceStatus.PAID || status == InvoiceStatus.CANCELLED || status == InvoiceStatus.SENT) {
             throw new IllegalStateException("Cannot update dates for " + status + " invoice");
         }
         if (issueDate != null) {
@@ -472,7 +475,7 @@ public class Invoice extends AggregateRoot {
     }
     
     public void updatePaymentTerms(PaymentTerms paymentTerms) {
-        if (status == InvoiceStatus.PAID || status == InvoiceStatus.CANCELLED) {
+        if (status == InvoiceStatus.PAID || status == InvoiceStatus.CANCELLED || status == InvoiceStatus.SENT) {
             throw new IllegalStateException("Cannot update payment terms for " + status + " invoice");
         }
         if (paymentTerms != null) {

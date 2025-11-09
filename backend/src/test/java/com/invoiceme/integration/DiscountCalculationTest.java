@@ -28,6 +28,12 @@ public class DiscountCalculationTest {
     private InvoiceRepository invoiceRepository;
     
     private Customer customer;
+    private static long invoiceNumberCounter = System.nanoTime() + 50000;
+    
+    private InvoiceNumber generateUniqueInvoiceNumber() {
+        // Use nanoTime modulo to get a unique sequence number per test run
+        return InvoiceNumber.generate((int)((invoiceNumberCounter++ % 9999) + 1));
+    }
     
     @BeforeEach
     void setUp() {
@@ -44,7 +50,7 @@ public class DiscountCalculationTest {
         // Create invoice with percentage discount
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -85,7 +91,7 @@ public class DiscountCalculationTest {
         // Create invoice with fixed discount
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -125,7 +131,7 @@ public class DiscountCalculationTest {
     void testMultipleLineItemsWithDifferentDiscounts() {
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -187,7 +193,7 @@ public class DiscountCalculationTest {
         // Test 50% discount
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -226,7 +232,7 @@ public class DiscountCalculationTest {
         // Test 5% discount
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -265,7 +271,7 @@ public class DiscountCalculationTest {
         // Test that fixed discount is capped at item price
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -304,7 +310,7 @@ public class DiscountCalculationTest {
     void testNoDiscountApplied() {
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -343,7 +349,7 @@ public class DiscountCalculationTest {
         // Verify discount is applied before tax calculation
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30

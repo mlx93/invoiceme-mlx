@@ -32,6 +32,7 @@ public class InvoiceQueryIntegrationTest {
     private InvoiceRepository invoiceRepository;
     
     private Customer customer;
+    private static long invoiceNumberCounter = System.nanoTime();
     
     @BeforeEach
     void setUp() {
@@ -44,12 +45,17 @@ public class InvoiceQueryIntegrationTest {
         customer = customerRepository.save(customer);
     }
     
+    private InvoiceNumber generateUniqueInvoiceNumber() {
+        // Use nanoTime modulo to get a unique sequence number per test run
+        return InvoiceNumber.generate((int)((invoiceNumberCounter++ % 9999) + 1));
+    }
+    
     @Test
     void testGetInvoiceById() {
         // Create invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -85,7 +91,7 @@ public class InvoiceQueryIntegrationTest {
         // Create invoices with different statuses
         Invoice draftInvoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -103,7 +109,7 @@ public class InvoiceQueryIntegrationTest {
         
         Invoice sentInvoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(2),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -151,7 +157,7 @@ public class InvoiceQueryIntegrationTest {
         // Create invoices for both customers
         Invoice invoice1 = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -169,7 +175,7 @@ public class InvoiceQueryIntegrationTest {
         
         Invoice invoice2 = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(2),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -187,7 +193,7 @@ public class InvoiceQueryIntegrationTest {
         
         Invoice invoice3 = Invoice.create(
             customer2.getId(),
-            InvoiceNumber.generate(3),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -231,7 +237,7 @@ public class InvoiceQueryIntegrationTest {
         // Create overdue invoice (due date in past)
         Invoice overdueInvoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now().minusDays(60),
             LocalDate.now().minusDays(30), // Due 30 days ago
             PaymentTerms.NET_30
@@ -251,7 +257,7 @@ public class InvoiceQueryIntegrationTest {
         // Create current invoice
         Invoice currentInvoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(2),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -284,7 +290,7 @@ public class InvoiceQueryIntegrationTest {
         // Create paid invoice
         Invoice paidInvoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -305,7 +311,7 @@ public class InvoiceQueryIntegrationTest {
         // Create unpaid invoice
         Invoice unpaidInvoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(2),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30

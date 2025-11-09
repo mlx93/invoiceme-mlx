@@ -30,6 +30,12 @@ public class LineItemCrudTest {
     private InvoiceRepository invoiceRepository;
     
     private Customer customer;
+    private static long invoiceNumberCounter = System.nanoTime() + 40000;
+    
+    private InvoiceNumber generateUniqueInvoiceNumber() {
+        // Use nanoTime modulo to get a unique sequence number per test run
+        return InvoiceNumber.generate((int)((invoiceNumberCounter++ % 9999) + 1));
+    }
     
     @BeforeEach
     void setUp() {
@@ -46,7 +52,7 @@ public class LineItemCrudTest {
         // Create draft invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -81,7 +87,7 @@ public class LineItemCrudTest {
         // Create draft invoice with line item
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -100,8 +106,7 @@ public class LineItemCrudTest {
         invoice = invoiceRepository.save(invoice);
         UUID lineItemId = invoice.getLineItems().get(0).getId();
         
-        // Update line item by removing old and adding new (updateLineItem doesn't exist)
-        invoice.removeLineItem(lineItemId);
+        // Update line item by adding new first, then removing old (must maintain at least one line item)
         invoice.addLineItem(com.invoiceme.domain.invoice.LineItem.create(
             "Updated Description",
             3,
@@ -111,6 +116,7 @@ public class LineItemCrudTest {
             java.math.BigDecimal.valueOf(8),
             0
         ));
+        invoice.removeLineItem(lineItemId);
         
         invoice = invoiceRepository.save(invoice);
         
@@ -132,7 +138,7 @@ public class LineItemCrudTest {
         // Create draft invoice with multiple line items
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -191,7 +197,7 @@ public class LineItemCrudTest {
         // Create invoice with line items
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -219,18 +225,26 @@ public class LineItemCrudTest {
         
         invoice = invoiceRepository.save(invoice);
         
-        // Remove all items
+        // Remove first item (should succeed)
         UUID item1Id = invoice.getLineItems().get(0).getId();
-        UUID item2Id = invoice.getLineItems().get(1).getId();
-        
         invoice.removeLineItem(item1Id);
-        invoice.removeLineItem(item2Id);
         invoice = invoiceRepository.save(invoice);
         
-        // Verify
-        assertThat(invoice.getLineItems()).isEmpty();
-        assertThat(invoice.getSubtotal().isZero()).isTrue();
-        assertThat(invoice.getTotalAmount().isZero()).isTrue();
+        // Verify one item remains
+        assertThat(invoice.getLineItems()).hasSize(1);
+        
+        // Try to remove the last item - should fail because domain requires at least one item
+        UUID item2Id = invoice.getLineItems().get(0).getId();
+        Invoice finalInvoice = invoice;
+        assertThatThrownBy(() -> 
+            finalInvoice.removeLineItem(item2Id)
+        ).isInstanceOf(IllegalStateException.class)
+         .hasMessageContaining("Invoice must have at least one line item");
+        
+        // Verify invoice still has one item
+        assertThat(invoice.getLineItems()).hasSize(1);
+        assertThat(invoice.getSubtotal().getAmount())
+            .isEqualByComparingTo(java.math.BigDecimal.valueOf(200.00));
     }
     
     @Test
@@ -238,7 +252,7 @@ public class LineItemCrudTest {
         // Create and send invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -278,7 +292,7 @@ public class LineItemCrudTest {
         // Create invoice with line items
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -311,7 +325,7 @@ public class LineItemCrudTest {
         // Create, send, and pay invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -352,7 +366,7 @@ public class LineItemCrudTest {
         // Create draft invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -408,7 +422,7 @@ public class LineItemCrudTest {
         // Create invoice with line items
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -427,8 +441,7 @@ public class LineItemCrudTest {
         invoice = invoiceRepository.save(invoice);
         UUID lineItemId = invoice.getLineItems().get(0).getId();
         
-        // Update line item by removing old and adding new (updateLineItem doesn't exist)
-        invoice.removeLineItem(lineItemId);
+        // Update line item by adding new first, then removing old (must maintain at least one line item)
         invoice.addLineItem(com.invoiceme.domain.invoice.LineItem.create(
             "Updated Item",
             2,
@@ -438,20 +451,26 @@ public class LineItemCrudTest {
             java.math.BigDecimal.ZERO,
             0
         ));
+        invoice.removeLineItem(lineItemId);
         invoice = invoiceRepository.save(invoice);
         
+        assertThat(invoice.getLineItems()).hasSize(1);
         assertThat(invoice.getLineItems().get(0).getDescription()).isEqualTo("Updated Item");
         assertThat(invoice.getSubtotal().getAmount())
             .isEqualByComparingTo(java.math.BigDecimal.valueOf(300.00));
         
-        // Remove line item (get the new ID)
+        // Try to remove the last line item - should fail because domain requires at least one item
         UUID updatedLineItemId = invoice.getLineItems().get(0).getId();
-        invoice.removeLineItem(updatedLineItemId);
-        invoice = invoiceRepository.save(invoice);
+        Invoice finalInvoice = invoice;
+        assertThatThrownBy(() -> 
+            finalInvoice.removeLineItem(updatedLineItemId)
+        ).isInstanceOf(IllegalStateException.class)
+         .hasMessageContaining("Invoice must have at least one line item");
         
-        // Verify
-        assertThat(invoice.getLineItems()).isEmpty();
-        assertThat(invoice.getSubtotal().isZero()).isTrue();
+        // Verify invoice still has the item
+        assertThat(invoice.getLineItems()).hasSize(1);
+        assertThat(invoice.getSubtotal().getAmount())
+            .isEqualByComparingTo(java.math.BigDecimal.valueOf(300.00));
     }
 }
 

@@ -30,6 +30,12 @@ public class InvoiceUpdateAndCancelTest {
     private InvoiceRepository invoiceRepository;
     
     private Customer customer;
+    private static long invoiceNumberCounter = System.nanoTime() + 20000;
+    
+    private InvoiceNumber generateUniqueInvoiceNumber() {
+        // Use nanoTime modulo to get a unique sequence number per test run
+        return InvoiceNumber.generate((int)((invoiceNumberCounter++ % 9999) + 1));
+    }
     
     @BeforeEach
     void setUp() {
@@ -46,7 +52,7 @@ public class InvoiceUpdateAndCancelTest {
         // Create draft invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -65,8 +71,7 @@ public class InvoiceUpdateAndCancelTest {
         invoice = invoiceRepository.save(invoice);
         UUID lineItemId = invoice.getLineItems().get(0).getId();
         
-        // Update line item by removing old and adding new (updateLineItem doesn't exist)
-        invoice.removeLineItem(lineItemId);
+        // Update line item by adding new first, then removing old (must maintain at least one line item)
         invoice.addLineItem(com.invoiceme.domain.invoice.LineItem.create(
             "Updated Item",
             2,
@@ -76,6 +81,7 @@ public class InvoiceUpdateAndCancelTest {
             java.math.BigDecimal.ZERO,
             0
         ));
+        invoice.removeLineItem(lineItemId);
         
         invoice = invoiceRepository.save(invoice);
         
@@ -94,7 +100,7 @@ public class InvoiceUpdateAndCancelTest {
         // Create invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -126,7 +132,7 @@ public class InvoiceUpdateAndCancelTest {
         // Create invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -160,7 +166,7 @@ public class InvoiceUpdateAndCancelTest {
         // Create and send invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -200,7 +206,7 @@ public class InvoiceUpdateAndCancelTest {
         // Create draft invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -231,7 +237,7 @@ public class InvoiceUpdateAndCancelTest {
         // Create and send invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -263,7 +269,7 @@ public class InvoiceUpdateAndCancelTest {
         // Create, send, and pay invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -296,7 +302,7 @@ public class InvoiceUpdateAndCancelTest {
         // Create draft invoice
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
@@ -352,7 +358,7 @@ public class InvoiceUpdateAndCancelTest {
         // Create draft invoice with multiple line items
         Invoice invoice = Invoice.create(
             customer.getId(),
-            InvoiceNumber.generate(1),
+            generateUniqueInvoiceNumber(),
             LocalDate.now(),
             LocalDate.now().plusDays(30),
             PaymentTerms.NET_30
