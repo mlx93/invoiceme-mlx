@@ -21,7 +21,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useInvoice, useUpdateInvoice } from '@/hooks/useInvoices';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useInvoice, useUpdateInvoice, useMarkInvoiceAsSent } from '@/hooks/useInvoices';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useAuth } from '@/contexts/AuthContext';
 import { canEditInvoice } from '@/lib/rbac';
@@ -71,7 +79,9 @@ export default function EditInvoicePage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { invoice, loading: fetchLoading, error: fetchError } = useInvoice(invoiceId);
   const { updateInvoice, loading, error } = useUpdateInvoice();
+  const { markAsSent, loading: sendingInvoice } = useMarkInvoiceAsSent();
   const { customers } = useCustomers({ size: 1000 });
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
 
   const {
     register,
@@ -203,10 +213,29 @@ export default function EditInvoicePage() {
         })),
         notes: data.notes,
       });
+      setSuccessDialogOpen(true);
+    } catch (err) {
+      // Error handled by hook
+    }
+  };
+
+  const handleSendInvoice = async () => {
+    try {
+      await markAsSent(invoiceId);
+      setSuccessDialogOpen(false);
       router.push(`/invoices/${invoiceId}`);
     } catch (err) {
       // Error handled by hook
     }
+  };
+
+  const handleViewInvoice = () => {
+    setSuccessDialogOpen(false);
+    router.push(`/invoices/${invoiceId}`);
+  };
+
+  const handleContinueEditing = () => {
+    setSuccessDialogOpen(false);
   };
 
   if (authLoading || !isAuthenticated || fetchLoading || !invoice) {
@@ -537,6 +566,29 @@ export default function EditInvoicePage() {
             </Button>
           </div>
         </form>
+
+        {/* Success Modal */}
+        <Dialog open={successDialogOpen} onOpenChange={setSuccessDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Invoice Updated Successfully!</DialogTitle>
+              <DialogDescription>
+                Your invoice has been updated. Would you like to send it to the customer now?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button onClick={handleSendInvoice} disabled={sendingInvoice}>
+                {sendingInvoice ? 'Sending...' : 'Send to Customer'}
+              </Button>
+              <Button variant="outline" onClick={handleViewInvoice}>
+                View Invoice
+              </Button>
+              <Button variant="ghost" onClick={handleContinueEditing}>
+                Continue Editing
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
