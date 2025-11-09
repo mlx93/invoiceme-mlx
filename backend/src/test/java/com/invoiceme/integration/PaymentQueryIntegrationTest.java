@@ -161,6 +161,7 @@ public class PaymentQueryIntegrationTest {
         assertThat(payments).hasSize(3);
         assertThat(payments).extracting("amount")
             .extracting("amount")
+            .usingElementComparator((a, b) -> ((java.math.BigDecimal) a).compareTo((java.math.BigDecimal) b))
             .containsExactlyInAnyOrder(
                 java.math.BigDecimal.valueOf(300.00),
                 java.math.BigDecimal.valueOf(400.00),
@@ -221,6 +222,7 @@ public class PaymentQueryIntegrationTest {
         assertThat(customerPayments).allMatch(p -> p.getCustomerId().equals(customer.getId()));
         assertThat(customerPayments).extracting("amount")
             .extracting("amount")
+            .usingElementComparator((a, b) -> ((java.math.BigDecimal) a).compareTo((java.math.BigDecimal) b))
             .containsExactlyInAnyOrder(
                 java.math.BigDecimal.valueOf(500.00),
                 java.math.BigDecimal.valueOf(750.00)

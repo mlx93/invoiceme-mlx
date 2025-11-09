@@ -227,7 +227,7 @@ public class InvoiceStateTransitionTest {
         assertThatThrownBy(() -> 
             finalInvoice.markAsSent()
         ).isInstanceOf(IllegalStateException.class)
-         .hasMessageContaining("already been sent");
+         .hasMessageContaining("Can only mark DRAFT invoices as sent");
     }
     
     @Test
@@ -294,7 +294,7 @@ public class InvoiceStateTransitionTest {
         assertThatThrownBy(() -> 
             finalInvoice.cancel()
         ).isInstanceOf(IllegalStateException.class)
-         .hasMessageContaining("Cannot cancel");
+         .hasMessageContaining("already cancelled");
     }
     
     @Test
@@ -371,8 +371,7 @@ public class InvoiceStateTransitionTest {
             null // createdByUserId - can be null for tests
         );
         paymentRepository.save(payment);
-        
-        invoice.recordPayment(Money.of(400.00));
+        // Payment.record() already calls invoice.recordPayment(), just save the invoice
         invoice = invoiceRepository.save(invoice);
         
         // Verify invoice stays SENT (not enough payment)

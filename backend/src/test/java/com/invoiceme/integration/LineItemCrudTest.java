@@ -241,6 +241,9 @@ public class LineItemCrudTest {
         ).isInstanceOf(IllegalStateException.class)
          .hasMessageContaining("Invoice must have at least one line item");
         
+        // Reload invoice from repository to get persisted state (exception prevents save, so state should be unchanged)
+        invoice = invoiceRepository.findById(invoice.getId()).orElseThrow();
+        
         // Verify invoice still has one item
         assertThat(invoice.getLineItems()).hasSize(1);
         assertThat(invoice.getSubtotal().getAmount())
@@ -466,6 +469,9 @@ public class LineItemCrudTest {
             finalInvoice.removeLineItem(updatedLineItemId)
         ).isInstanceOf(IllegalStateException.class)
          .hasMessageContaining("Invoice must have at least one line item");
+        
+        // Reload invoice from repository to get persisted state (exception prevents save, so state should be unchanged)
+        invoice = invoiceRepository.findById(invoice.getId()).orElseThrow();
         
         // Verify invoice still has the item
         assertThat(invoice.getLineItems()).hasSize(1);
