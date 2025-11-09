@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: 'export',  // Enable static export for AWS Amplify
+  images: {
+    unoptimized: true,  // Required for static export
+  },
+  trailingSlash: true,  // Helps with routing on static hosts
 };
 
 export default nextConfig;
