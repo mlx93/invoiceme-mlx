@@ -55,7 +55,7 @@ jobs:
           version_label: ${{ github.sha }}-${{ github.run_number }}
           region: ${{ env.AWS_REGION }}
           deployment_package: backend/target/invoiceme-backend-2.0.0.jar
-          wait_for_environment_update: true
+          wait_for_deployment: true
           use_existing_version_if_available: true
       
       - name: Verify backend deployment

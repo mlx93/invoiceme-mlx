@@ -33,7 +33,7 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
     
-    @PostMapping("/{id}/approve")
+    @PatchMapping("/{id}/approve")
     @PreAuthorize("hasAnyRole('SYSADMIN', 'ACCOUNTANT')")
     public ResponseEntity<Void> approveUser(@PathVariable UUID id) {
         // TODO: Get approvedByUserId from security context
@@ -42,7 +42,7 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
     
-    @PostMapping("/{id}/reject")
+    @PatchMapping("/{id}/reject")
     @PreAuthorize("hasAnyRole('SYSADMIN', 'ACCOUNTANT')")
     public ResponseEntity<Void> rejectUser(
             @PathVariable UUID id,
