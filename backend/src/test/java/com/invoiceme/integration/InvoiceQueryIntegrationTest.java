@@ -204,23 +204,26 @@ public class InvoiceQueryIntegrationTest {
         invoice3 = invoiceRepository.save(invoice3);
         
         // Query by customer
+        UUID customer1Id = customer.getId();
+        UUID customer2Id = customer2.getId();
+        
         Page<Invoice> customer1Invoices = invoiceRepository.findByCustomerId(
-            customer.getId(),
+            customer1Id,
             PageRequest.of(0, 10)
         );
         Page<Invoice> customer2Invoices = invoiceRepository.findByCustomerId(
-            customer2.getId(),
+            customer2Id,
             PageRequest.of(0, 10)
         );
         
         // Verify
         assertThat(customer1Invoices.getContent()).hasSize(2);
         assertThat(customer1Invoices.getContent())
-            .allMatch(inv -> inv.getCustomerId().equals(customer.getId()));
+            .allMatch(inv -> inv.getCustomerId().equals(customer1Id));
         
         assertThat(customer2Invoices.getContent()).hasSize(1);
         assertThat(customer2Invoices.getContent())
-            .allMatch(inv -> inv.getCustomerId().equals(customer2.getId()));
+            .allMatch(inv -> inv.getCustomerId().equals(customer2Id));
     }
     
     @Test
@@ -265,15 +268,12 @@ public class InvoiceQueryIntegrationTest {
         currentInvoice.markAsSent();
         currentInvoice = invoiceRepository.save(currentInvoice);
         
-        // Query overdue invoices
-        Page<Invoice> overduePage = invoiceRepository.findOverdueInvoices(
-            LocalDate.now(),
-            PageRequest.of(0, 10)
-        );
+        // Query overdue invoices (returns List, not Page)
+        java.util.List<Invoice> overdueInvoices = invoiceRepository.findOverdueInvoices(LocalDate.now());
         
         // Verify
-        assertThat(overduePage.getContent()).isNotEmpty();
-        assertThat(overduePage.getContent()).anyMatch(inv -> 
+        assertThat(overdueInvoices).isNotEmpty();
+        assertThat(overdueInvoices).anyMatch(inv -> 
             inv.getDueDate().isBefore(LocalDate.now()) && 
             inv.getStatus() == InvoiceStatus.SENT
         );
@@ -322,9 +322,17 @@ public class InvoiceQueryIntegrationTest {
         unpaidInvoice.markAsSent();
         unpaidInvoice = invoiceRepository.save(unpaidInvoice);
         
-        // Query invoices with balance due
-        Page<Invoice> unpaidPage = invoiceRepository.findByStatusIn(
+        // Query invoices with balance due using findByFilters
+        Page<Invoice> unpaidPage = invoiceRepository.findByFilters(
             java.util.List.of(InvoiceStatus.SENT, InvoiceStatus.DRAFT),
+            null, // customerId
+            null, // issueDateFrom
+            null, // issueDateTo
+            null, // dueDateFrom
+            null, // dueDateTo
+            null, // amountFrom
+            null, // amountTo
+            null, // search
             PageRequest.of(0, 10)
         );
         

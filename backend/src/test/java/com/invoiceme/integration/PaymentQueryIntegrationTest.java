@@ -132,7 +132,7 @@ public class PaymentQueryIntegrationTest {
             invoice,
             customer,
             Money.of(300.00),
-            PaymentMethod.CHECK,
+            PaymentMethod.ACH,
             LocalDate.now(),
             UUID.randomUUID()
         );
@@ -141,7 +141,8 @@ public class PaymentQueryIntegrationTest {
         invoice = invoiceRepository.save(invoice);
         
         // Query payments for invoice
-        List<Payment> payments = paymentRepository.findByInvoiceId(invoice.getId());
+        Page<Payment> paymentPage = paymentRepository.findByInvoiceId(invoice.getId(), PageRequest.of(0, 10));
+        List<Payment> payments = paymentPage.getContent();
         
         // Verify
         assertThat(payments).hasSize(3);
@@ -199,7 +200,8 @@ public class PaymentQueryIntegrationTest {
         payment2 = paymentRepository.save(payment2);
         
         // Query payments for customer
-        List<Payment> customerPayments = paymentRepository.findByCustomerId(customer.getId());
+        Page<Payment> customerPaymentPage = paymentRepository.findByCustomerId(customer.getId(), PageRequest.of(0, 10));
+        List<Payment> customerPayments = customerPaymentPage.getContent();
         
         // Verify
         assertThat(customerPayments).hasSize(2);
@@ -235,15 +237,15 @@ public class PaymentQueryIntegrationTest {
         );
         achPayment = paymentRepository.save(achPayment);
         
-        Payment checkPayment = Payment.record(
+        Payment achPayment2 = Payment.record(
             invoice,
             customer,
             Money.of(150.00),
-            PaymentMethod.CHECK,
+            PaymentMethod.ACH,
             LocalDate.now(),
             UUID.randomUUID()
         );
-        checkPayment = paymentRepository.save(checkPayment);
+        achPayment2 = paymentRepository.save(achPayment2);
         
         // Query by payment method
         Page<Payment> creditCardPage = paymentRepository.findByPaymentMethod(
@@ -291,10 +293,14 @@ public class PaymentQueryIntegrationTest {
         );
         recentPayment = paymentRepository.save(recentPayment);
         
-        // Query by date range
-        Page<Payment> paymentsInRange = paymentRepository.findByPaymentDateBetween(
-            startDate,
-            endDate,
+        // Query by date range using findByFilters
+        Page<Payment> paymentsInRange = paymentRepository.findByFilters(
+            null, // invoiceId
+            null, // customerId
+            startDate, // paymentDateFrom
+            endDate, // paymentDateTo
+            null, // paymentMethod
+            null, // status
             PageRequest.of(0, 10)
         );
         
@@ -334,14 +340,15 @@ public class PaymentQueryIntegrationTest {
             invoice,
             customer,
             Money.of(400.00),
-            PaymentMethod.CHECK,
+            PaymentMethod.ACH,
             LocalDate.now(),
             UUID.randomUUID()
         );
         paymentRepository.save(payment3);
         
         // Get all payments and sum
-        List<Payment> allPayments = paymentRepository.findByInvoiceId(invoice.getId());
+        Page<Payment> paymentPage = paymentRepository.findByInvoiceId(invoice.getId(), PageRequest.of(0, 10));
+        List<Payment> allPayments = paymentPage.getContent();
         Money totalPaid = allPayments.stream()
             .map(Payment::getAmount)
             .reduce(Money.zero(), Money::add);

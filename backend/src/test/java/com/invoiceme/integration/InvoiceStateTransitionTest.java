@@ -124,45 +124,9 @@ public class InvoiceStateTransitionTest {
         assertThat(invoice.getBalanceDue().isZero()).isTrue();
     }
     
-    @Test
-    void testValidTransition_PaidToSentViaRefund() {
-        // Create, send, and pay invoice
-        Invoice invoice = Invoice.create(
-            customer.getId(),
-            InvoiceNumber.generate(1),
-            LocalDate.now(),
-            LocalDate.now().plusDays(30),
-            PaymentTerms.NET_30
-        );
-        
-        invoice.addLineItem(com.invoiceme.domain.invoice.LineItem.create(
-            "Test Item",
-            1,
-            Money.of(500.00),
-            DiscountType.NONE,
-            Money.zero(),
-            java.math.BigDecimal.ZERO,
-            0
-        ));
-        
-        invoice.markAsSent();
-        invoice.recordPayment(Money.of(500.00));
-        invoice = invoiceRepository.save(invoice);
-        assertThat(invoice.getStatus()).isEqualTo(InvoiceStatus.PAID);
-        
-        // Issue partial refund - transitions back to SENT
-        invoice.issueRefund(
-            Money.of(200.00),
-            "Partial refund requested by customer"
-        );
-        invoice = invoiceRepository.save(invoice);
-        
-        // Verify
-        assertThat(invoice.getStatus()).isEqualTo(InvoiceStatus.SENT);
-        assertThat(invoice.getBalanceDue().getAmount())
-            .isEqualByComparingTo(java.math.BigDecimal.valueOf(200.00));
-        assertThat(invoice.getPaidDate()).isNull(); // No longer fully paid
-    }
+    // Note: Refunds are handled at the application layer via IssueRefundHandler,
+    // not at the domain layer. Refunds create customer credits but don't change invoice status.
+    // This test is removed as refunds are not a domain operation.
     
     @Test
     void testValidTransition_DraftToCancelled() {
@@ -189,7 +153,7 @@ public class InvoiceStateTransitionTest {
         assertThat(invoice.getStatus()).isEqualTo(InvoiceStatus.DRAFT);
         
         // Cancel invoice
-        invoice.cancel("Customer cancelled order");
+        invoice.cancel();
         invoice = invoiceRepository.save(invoice);
         
         // Verify
@@ -222,7 +186,7 @@ public class InvoiceStateTransitionTest {
         assertThat(invoice.getStatus()).isEqualTo(InvoiceStatus.SENT);
         
         // Cancel invoice
-        invoice.cancel("Services not provided");
+        invoice.cancel();
         invoice = invoiceRepository.save(invoice);
         
         // Verify
@@ -290,7 +254,7 @@ public class InvoiceStateTransitionTest {
         // Attempt to cancel paid invoice
         Invoice finalInvoice = invoice;
         assertThatThrownBy(() -> 
-            finalInvoice.cancel("Attempt to cancel")
+            finalInvoice.cancel()
         ).isInstanceOf(IllegalStateException.class)
          .hasMessageContaining("Cannot cancel");
     }
@@ -316,14 +280,14 @@ public class InvoiceStateTransitionTest {
             0
         ));
         
-        invoice.cancel("First cancellation");
+        invoice.cancel();
         invoice = invoiceRepository.save(invoice);
         assertThat(invoice.getStatus()).isEqualTo(InvoiceStatus.CANCELLED);
         
         // Attempt to cancel again
         Invoice finalInvoice = invoice;
         assertThatThrownBy(() -> 
-            finalInvoice.cancel("Second cancellation")
+            finalInvoice.cancel()
         ).isInstanceOf(IllegalStateException.class)
          .hasMessageContaining("Cannot cancel");
     }
@@ -349,7 +313,7 @@ public class InvoiceStateTransitionTest {
             0
         ));
         
-        invoice.cancel("Cancelled");
+        invoice.cancel();
         invoice = invoiceRepository.save(invoice);
         
         // Attempt to add line item to cancelled invoice

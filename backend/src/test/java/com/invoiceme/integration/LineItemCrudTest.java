@@ -100,9 +100,9 @@ public class LineItemCrudTest {
         invoice = invoiceRepository.save(invoice);
         UUID lineItemId = invoice.getLineItems().get(0).getId();
         
-        // Update line item
-        invoice.updateLineItem(
-            lineItemId,
+        // Update line item by removing old and adding new (updateLineItem doesn't exist)
+        invoice.removeLineItem(lineItemId);
+        invoice.addLineItem(com.invoiceme.domain.invoice.LineItem.create(
             "Updated Description",
             3,
             Money.of(150.00),
@@ -110,7 +110,7 @@ public class LineItemCrudTest {
             Money.of(10),
             java.math.BigDecimal.valueOf(8),
             0
-        );
+        ));
         
         invoice = invoiceRepository.save(invoice);
         
@@ -427,9 +427,9 @@ public class LineItemCrudTest {
         invoice = invoiceRepository.save(invoice);
         UUID lineItemId = invoice.getLineItems().get(0).getId();
         
-        // Update line item
-        invoice.updateLineItem(
-            lineItemId,
+        // Update line item by removing old and adding new (updateLineItem doesn't exist)
+        invoice.removeLineItem(lineItemId);
+        invoice.addLineItem(com.invoiceme.domain.invoice.LineItem.create(
             "Updated Item",
             2,
             Money.of(150.00),
@@ -437,15 +437,16 @@ public class LineItemCrudTest {
             Money.zero(),
             java.math.BigDecimal.ZERO,
             0
-        );
+        ));
         invoice = invoiceRepository.save(invoice);
         
         assertThat(invoice.getLineItems().get(0).getDescription()).isEqualTo("Updated Item");
         assertThat(invoice.getSubtotal().getAmount())
             .isEqualByComparingTo(java.math.BigDecimal.valueOf(300.00));
         
-        // Remove line item
-        invoice.removeLineItem(lineItemId);
+        // Remove line item (get the new ID)
+        UUID updatedLineItemId = invoice.getLineItems().get(0).getId();
+        invoice.removeLineItem(updatedLineItemId);
         invoice = invoiceRepository.save(invoice);
         
         // Verify

@@ -65,9 +65,9 @@ public class InvoiceUpdateAndCancelTest {
         invoice = invoiceRepository.save(invoice);
         UUID lineItemId = invoice.getLineItems().get(0).getId();
         
-        // Update line item
-        invoice.updateLineItem(
-            lineItemId,
+        // Update line item by removing old and adding new (updateLineItem doesn't exist)
+        invoice.removeLineItem(lineItemId);
+        invoice.addLineItem(com.invoiceme.domain.invoice.LineItem.create(
             "Updated Item",
             2,
             Money.of(150.00),
@@ -75,7 +75,7 @@ public class InvoiceUpdateAndCancelTest {
             Money.zero(),
             java.math.BigDecimal.ZERO,
             0
-        );
+        ));
         
         invoice = invoiceRepository.save(invoice);
         
@@ -145,9 +145,9 @@ public class InvoiceUpdateAndCancelTest {
         invoice = invoiceRepository.save(invoice);
         LocalDate originalDueDate = invoice.getDueDate();
         
-        // Update due date
+        // Update due date using updateDates
         LocalDate newDueDate = LocalDate.now().plusDays(45);
-        invoice.updateDueDate(newDueDate);
+        invoice.updateDates(invoice.getIssueDate(), newDueDate);
         invoice = invoiceRepository.save(invoice);
         
         // Verify
@@ -219,7 +219,7 @@ public class InvoiceUpdateAndCancelTest {
         invoice = invoiceRepository.save(invoice);
         
         // Cancel invoice
-        invoice.cancel("Customer requested cancellation");
+        invoice.cancel();
         invoice = invoiceRepository.save(invoice);
         
         // Verify
@@ -251,7 +251,7 @@ public class InvoiceUpdateAndCancelTest {
         invoice = invoiceRepository.save(invoice);
         
         // Cancel invoice
-        invoice.cancel("No longer needed");
+        invoice.cancel();
         invoice = invoiceRepository.save(invoice);
         
         // Verify
@@ -286,7 +286,7 @@ public class InvoiceUpdateAndCancelTest {
         // Attempt to cancel paid invoice
         Invoice finalInvoice = invoice;
         assertThatThrownBy(() -> 
-            finalInvoice.cancel("Attempt to cancel")
+            finalInvoice.cancel()
         ).isInstanceOf(IllegalStateException.class)
          .hasMessageContaining("Cannot cancel");
     }

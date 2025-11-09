@@ -55,7 +55,7 @@ public class CustomerCrudIntegrationTest {
         Customer customer = Customer.create(
             "Test Company",
             Email.of("test@company.com"),
-            CustomerType.INDIVIDUAL
+            CustomerType.RESIDENTIAL
         );
         customer = customerRepository.save(customer);
         UUID customerId = customer.getId();
@@ -83,7 +83,6 @@ public class CustomerCrudIntegrationTest {
         // Update customer details
         Address newAddress = Address.of(
             "123 Main St",
-            "Suite 100",
             "San Francisco",
             "CA",
             "94102",
@@ -95,7 +94,7 @@ public class CustomerCrudIntegrationTest {
             "John Doe",
             "555-1234",
             newAddress,
-            CustomerType.INDIVIDUAL
+            CustomerType.RESIDENTIAL
         );
         
         customer = customerRepository.save(customer);
@@ -107,7 +106,7 @@ public class CustomerCrudIntegrationTest {
         assertThat(customer.getAddress()).isNotNull();
         assertThat(customer.getAddress().getStreet()).isEqualTo("123 Main St");
         assertThat(customer.getAddress().getCity()).isEqualTo("San Francisco");
-        assertThat(customer.getCustomerType()).isEqualTo(CustomerType.INDIVIDUAL);
+        assertThat(customer.getCustomerType()).isEqualTo(CustomerType.RESIDENTIAL);
     }
     
     @Test
@@ -145,7 +144,7 @@ public class CustomerCrudIntegrationTest {
         Customer customer2 = Customer.create(
             "Company B",
             Email.of("b@company.com"),
-            CustomerType.INDIVIDUAL
+            CustomerType.RESIDENTIAL
         );
         Customer customer3 = Customer.create(
             "Company C",
