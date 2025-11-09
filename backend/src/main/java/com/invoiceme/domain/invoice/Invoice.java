@@ -178,16 +178,21 @@ public class Invoice extends AggregateRoot {
             throw new IllegalStateException("Cannot remove line items from " + status + " invoice");
         }
         
-        // Skip items with null IDs (newly added, not yet persisted)
+        // Check if removing this item would leave the list empty BEFORE actually removing
+        long matchingItems = lineItems.stream()
+            .filter(item -> item.getId() != null && item.getId().equals(lineItemId))
+            .count();
+        
+        if (matchingItems > 0 && lineItems.size() == 1) {
+            throw new IllegalStateException("Invoice must have at least one line item");
+        }
+        
+        // Now safe to remove
         boolean removed = lineItems.removeIf(item -> 
             item.getId() != null && item.getId().equals(lineItemId)
         );
         if (!removed) {
             throw new IllegalArgumentException("Line item not found: " + lineItemId);
-        }
-        
-        if (lineItems.isEmpty()) {
-            throw new IllegalStateException("Invoice must have at least one line item");
         }
         
         recalculateTotals();
