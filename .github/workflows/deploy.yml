@@ -99,7 +99,17 @@ jobs:
       - name: Create deployment package
         run: |
           cd frontend
-          zip -r ../frontend-deploy.zip . -x "node_modules/*" -x ".next/cache/*" -x ".git/*"
+          # Exclude dev artifacts, tests, and unnecessary files
+          zip -r ../frontend-deploy.zip . \
+            -x "node_modules/*" \
+            -x ".next/cache/*" \
+            -x ".next/dev/*" \
+            -x ".git/*" \
+            -x "*.md" \
+            -x ".gitignore" \
+            -x ".eslintrc*" \
+            -x "*.test.*" \
+            -x "*.spec.*"
       
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -119,6 +129,7 @@ jobs:
           region: ${{ env.AWS_REGION }}
           deployment_package: frontend-deploy.zip
           wait_for_deployment: true
+          wait_for_environment_recovery: 300
           use_existing_version_if_available: true
       
       - name: Verify frontend deployment
