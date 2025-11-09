@@ -52,7 +52,3 @@ export function canApproveUsers(role: UserRole): boolean {
   return role === 'SYSADMIN';
 }
 
-export function canManageRecurringInvoices(role: UserRole): boolean {
-  return ['SYSADMIN', 'ACCOUNTANT'].includes(role);
-}
-

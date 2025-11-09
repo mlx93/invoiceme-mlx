@@ -308,73 +308,7 @@ lateFeeScheduledJob.applyLateFees();
 
 ---
 
-### 5. RecurringInvoiceGeneratedEvent
-
-**Published By**: Scheduled job (`RecurringInvoiceScheduledJob`)  
-**Aggregate**: RecurringInvoiceTemplate  
-**When**: Invoice is generated from recurring template (daily scheduled job)
-
-**Payload**:
-```java
-{
-    templateId: UUID,
-    templateName: String,
-    invoiceId: UUID,
-    invoiceNumber: String,
-    customerId: UUID,
-    customerName: String,
-    customerEmail: String,
-    nextInvoiceDate: LocalDate,
-    autoSend: Boolean,
-    generatedDate: LocalDate
-}
-```
-
-**Consumers**:
-1. **Email Listener** (`RecurringInvoiceEmailListener`)
-   - Sends invoice email to customer (if autoSend = true)
-   - Sends notification email to SysAdmin (daily summary)
-   - Email includes: Invoice PDF attachment, payment link
-
-2. **Dashboard Cache Listener** (`DashboardCacheInvalidationListener`)
-   - Invalidates dashboard metrics cache
-   - Triggers cache refresh for revenue metrics
-
-3. **Activity Feed Listener** (`ActivityFeedListener`)
-   - Logs recurring invoice generation event to activity feed
-   - Records: Template ID, invoice ID, invoice number
-
-**Business Rules**:
-- Invoice generated with status DRAFT (if autoSend = false) or SENT (if autoSend = true)
-- Template's nextInvoiceDate updated by frequency period
-- If endDate reached, template status changes to COMPLETED
-
-**Scheduled Job**:
-```java
-@Scheduled(cron = "0 0 * * *", zone = "America/Chicago")
-public void generateRecurringInvoices() {
-    // Runs daily at midnight Central Time
-    // Checks active templates where nextInvoiceDate <= current date
-    // Generates invoices from templates
-    // → RecurringInvoiceGeneratedEvent published for each invoice
-}
-```
-
-**Example**:
-```java
-// Scheduled job runs daily
-recurringInvoiceScheduledJob.generateRecurringInvoices();
-// → RecurringInvoiceGeneratedEvent published for each generated invoice
-
-// Event listeners execute:
-// 1. Invoice email sent (if autoSend = true)
-// 2. Dashboard cache invalidated
-// 3. Activity feed updated
-```
-
----
-
-### 6. RefundIssuedEvent
+### 5. RefundIssuedEvent
 
 **Published By**: `Refund.issue()` method  
 **Aggregate**: Refund  
@@ -425,7 +359,7 @@ Refund refund = Refund.issue(invoice, Money.of(300.00), "Service dispute", false
 
 ---
 
-### 7. CreditAppliedEvent
+### 6. CreditAppliedEvent
 
 **Published By**: `Customer.applyCredit()` method  
 **Aggregate**: Customer  
@@ -469,7 +403,7 @@ customer.applyCredit(Money.of(100.00));
 
 ---
 
-### 8. CreditDeductedEvent
+### 7. CreditDeductedEvent
 
 **Published By**: `Customer.deductCredit()` method  
 **Aggregate**: Customer  
@@ -514,7 +448,7 @@ customer.deductCredit(Money.of(50.00));
 
 ---
 
-### 9. CustomerDeactivatedEvent
+### 8. CustomerDeactivatedEvent
 
 **Published By**: `Customer.markAsInactive()` method  
 **Aggregate**: Customer  
@@ -619,7 +553,6 @@ invoice.cancel();
 | `InvoiceSentEvent` | `Invoice.markAsSent()` | Email, Dashboard Cache, Activity Feed | Invoice email with PDF, cache invalidation, audit log |
 | `InvoiceFullyPaidEvent` | `Invoice.recordPayment()` (when balance = 0) | Email, Notification, Activity Feed | Payment confirmation email, notification, audit log |
 | `LateFeeAppliedEvent` | Scheduled job (`LateFeeScheduledJob`) | Email, Activity Feed | Overdue reminder email, audit log |
-| `RecurringInvoiceGeneratedEvent` | Scheduled job (`RecurringInvoiceScheduledJob`) | Email, Dashboard Cache, Activity Feed | Invoice email (if autoSend), cache invalidation, audit log |
 | `RefundIssuedEvent` | `Refund.issue()` | Email, Activity Feed | Refund notification email, audit log |
 | `CreditAppliedEvent` | `Customer.applyCredit()` | Audit Log, Activity Feed | Audit log, activity feed |
 | `CreditDeductedEvent` | `Customer.deductCredit()` | Audit Log, Activity Feed | Audit log, activity feed |
@@ -641,7 +574,6 @@ invoice.cancel();
 - `InvoiceSentEmailListener` → Sends invoice email with PDF
 - `InvoiceFullyPaidEmailListener` → Sends payment completion notification
 - `LateFeeEmailListener` → Sends overdue reminder
-- `RecurringInvoiceEmailListener` → Sends recurring invoice email
 - `RefundEmailListener` → Sends refund notification
 - `InvoiceCancelledEmailListener` → Sends cancellation notice
 

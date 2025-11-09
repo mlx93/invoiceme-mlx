@@ -63,8 +63,6 @@ public class ActivityFeedListener {
             return ((CreditDeductedEvent) event).getCustomerId();
         } else if (event instanceof CustomerDeactivatedEvent) {
             return ((CustomerDeactivatedEvent) event).getCustomerId();
-        } else if (event instanceof RecurringInvoiceGeneratedEvent) {
-            return ((RecurringInvoiceGeneratedEvent) event).getInvoiceId();
         } else if (event instanceof RefundIssuedEvent) {
             return ((RefundIssuedEvent) event).getInvoiceId();
         }
@@ -96,9 +94,6 @@ public class ActivityFeedListener {
         } else if (event instanceof CustomerDeactivatedEvent) {
             CustomerDeactivatedEvent e = (CustomerDeactivatedEvent) event;
             return String.format("Customer %s deactivated: %s", e.getCustomerName(), e.getReason());
-        } else if (event instanceof RecurringInvoiceGeneratedEvent) {
-            RecurringInvoiceGeneratedEvent e = (RecurringInvoiceGeneratedEvent) event;
-            return String.format("Recurring invoice %s generated from template %s", e.getInvoiceNumber(), e.getTemplateName());
         } else if (event instanceof RefundIssuedEvent) {
             RefundIssuedEvent e = (RefundIssuedEvent) event;
             return String.format("Refund of %s issued for invoice %s", e.getRefundAmount(), e.getInvoiceNumber());

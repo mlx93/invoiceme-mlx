@@ -3,6 +3,9 @@
 .env.local
 .env*.local
 
+# Sensitive deployment files
+docs/deployment/ELASTIC_BEANSTALK_ENV_VALUES.txt
+
 # Dependencies
 node_modules/
 backend/target/

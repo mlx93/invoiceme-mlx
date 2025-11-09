@@ -93,18 +93,6 @@ export function Header() {
                   >
                     Payments
                   </Link>
-                  {['SYSADMIN', 'ACCOUNTANT'].includes(user.role) && (
-                    <Link
-                      href="/recurring-invoices"
-                      className={`text-sm font-medium ${
-                        pathname?.startsWith('/recurring-invoices')
-                          ? 'text-blue-600'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      Recurring
-                    </Link>
-                  )}
                   {user.role === 'SYSADMIN' && (
                     <Link
                       href="/users/pending"

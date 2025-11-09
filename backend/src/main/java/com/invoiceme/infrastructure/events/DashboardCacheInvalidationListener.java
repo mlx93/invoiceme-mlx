@@ -2,7 +2,6 @@ package com.invoiceme.infrastructure.events;
 
 import com.invoiceme.domain.events.PaymentRecordedEvent;
 import com.invoiceme.domain.events.InvoiceSentEvent;
-import com.invoiceme.domain.events.RecurringInvoiceGeneratedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
@@ -29,13 +28,6 @@ public class DashboardCacheInvalidationListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleInvoiceSent(InvoiceSentEvent event) {
         log.debug("Invalidating dashboard cache due to InvoiceSentEvent");
-        invalidateCache();
-    }
-    
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleRecurringInvoiceGenerated(RecurringInvoiceGeneratedEvent event) {
-        log.debug("Invalidating dashboard cache due to RecurringInvoiceGeneratedEvent");
         invalidateCache();
     }
     

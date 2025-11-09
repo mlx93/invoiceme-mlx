@@ -12,7 +12,7 @@ This document defines the Domain-Driven Design (DDD) aggregates for the InvoiceM
 
 **Key Principles**:
 - **Rich Domain Models**: Aggregates contain business logic and behavior methods, not just getters/setters
-- **Aggregate Roots**: Customer, Invoice, Payment, RecurringInvoiceTemplate are aggregate roots that enforce invariants
+- **Aggregate Roots**: Customer, Invoice, Payment are aggregate roots that enforce invariants
 - **Value Objects**: Immutable objects (Money, Email, InvoiceNumber, Address) with no identity
 - **Domain Events**: Business-significant occurrences published after transaction commit
 - **Invariants**: Business rules enforced at aggregate level (cannot be violated)
@@ -83,7 +83,6 @@ customer.deductCredit(Money.of(50.00, Currency.USD));
 **Business Rules**:
 - Customer can be deleted only if:
   - All invoices are paid (balance = $0) OR cancelled
-  - No active recurring invoice templates
   - Credit balance = $0.00
 
 **Example**:
@@ -117,7 +116,6 @@ if (customer.canBeDeleted()) {
 1. **Email Uniqueness**: Email address must be unique across all customers (enforced at database level)
 2. **Credit Balance Non-Negative**: `creditBalance >= $0.00` (enforced by CHECK constraint and domain logic)
 3. **Cannot Delete with Outstanding Balance**: Customer cannot be deleted if any invoice has balance > $0
-4. **Cannot Delete with Active Templates**: Customer cannot be deleted if any recurring invoice template is ACTIVE
 
 ### 1.4 Domain Events
 
@@ -135,7 +133,6 @@ if (customer.canBeDeleted()) {
 - Relationships: 
   - One-to-Many with Invoices (reference only, Invoice is separate aggregate)
   - One-to-Many with Payments (reference only, Payment is separate aggregate)
-  - One-to-Many with RecurringInvoiceTemplates (reference only, Template is separate aggregate)
 
 **Consistency Boundary**:
 - Customer aggregate ensures credit balance consistency
@@ -488,170 +485,9 @@ Payment payment = Payment.record(
 
 ---
 
-## 4. RecurringInvoiceTemplate Aggregate
+## 4. Value Objects
 
-### 4.1 Properties
-
-| Property | Type | Description | Constraints |
-|----------|------|-------------|-------------|
-| `id` | UUID | Unique template identifier | Primary key, immutable |
-| `customerId` | UUID | Reference to Customer aggregate | Required, foreign key |
-| `templateName` | String | Template name/description | Required, max 255 chars |
-| `frequency` | Frequency (Enum) | MONTHLY, QUARTERLY, or ANNUALLY | Required |
-| `startDate` | LocalDate | First invoice generation date | Required |
-| `endDate` | LocalDate | Optional end date | Optional, must be >= startDate |
-| `nextInvoiceDate` | LocalDate | Calculated next generation date | Required, must be >= startDate |
-| `status` | TemplateStatus (Enum) | ACTIVE, PAUSED, or COMPLETED | Required, default ACTIVE |
-| `lineItems` | List<TemplateLineItem> | Predefined line items | Required, min 1 item |
-| `paymentTerms` | PaymentTerms (Enum) | NET_30, DUE_ON_RECEIPT, or CUSTOM | Required, default NET_30 |
-| `autoSend` | Boolean | If true, generated invoices are auto-sent | Required, default false |
-| `createdByUserId` | UUID | User who created the template | Required, foreign key |
-| `createdAt` | Instant | Creation timestamp | Auto-generated, immutable |
-| `updatedAt` | Instant | Last update timestamp | Auto-updated on changes |
-
-### 4.2 Template Line Item Entity (Within Template Aggregate)
-
-| Property | Type | Description | Constraints |
-|----------|------|-------------|-------------|
-| `id` | UUID | Unique template line item identifier | Primary key |
-| `description` | String | Line item description | Required, max 500 chars |
-| `quantity` | Integer | Quantity | Required, >= 1 |
-| `unitPrice` | Money | Price per unit | Required, >= $0.00 |
-| `discountType` | DiscountType (Enum) | NONE, PERCENTAGE, or FIXED | Required, default NONE |
-| `discountValue` | Money | Discount amount or percentage | Required, >= $0.00 |
-| `taxRate` | BigDecimal | Tax rate percentage (0-100) | Required, default 0, 0-100 |
-| `sortOrder` | Integer | Display order | Required, default 0 |
-
-### 4.3 Behavior Methods
-
-#### `generateInvoice()`
-**Purpose**: Generate invoice from template (called by scheduled job)  
-**Returns**: `Invoice` - Generated invoice entity  
-**Side Effects**:
-- Creates new Invoice entity with status DRAFT (or SENT if autoSend = true)
-- Copies all template line items to invoice line items
-- Sets invoice issueDate = nextInvoiceDate
-- Calculates invoice dueDate based on paymentTerms
-- Updates `nextInvoiceDate` by adding frequency period (monthly/quarterly/annually)
-- If endDate reached, sets `status` to COMPLETED
-- Publishes `RecurringInvoiceGeneratedEvent` (after transaction commit)
-- Logs to activity feed
-
-**Business Rules**:
-- Can only generate if status is ACTIVE
-- nextInvoiceDate must be <= current date
-- If autoSend = true, invoice status = SENT and email sent
-- If autoSend = false, invoice status = DRAFT
-
-**Example**:
-```java
-Invoice invoice = template.generateInvoice();
-// Invoice created from template, nextInvoiceDate updated
-```
-
-#### `pause()`
-**Purpose**: Pause template (stops auto-generation)  
-**Returns**: `void`  
-**Side Effects**:
-- Updates `status` to PAUSED
-- Clears `nextInvoiceDate` (sets to null)
-- Logs to activity feed
-
-**Business Rules**:
-- Can only pause if status is ACTIVE
-- Cannot pause if status is COMPLETED
-
-**Example**:
-```java
-template.pause();
-// Status changes to PAUSED, nextInvoiceDate cleared
-```
-
-#### `resume()`
-**Purpose**: Resume template (restarts auto-generation)  
-**Returns**: `void`  
-**Side Effects**:
-- Updates `status` to ACTIVE
-- Recalculates `nextInvoiceDate` from current date + frequency period
-- Logs to activity feed
-
-**Business Rules**:
-- Can only resume if status is PAUSED
-- Cannot resume if status is COMPLETED
-- nextInvoiceDate recalculated from current date
-
-**Example**:
-```java
-template.resume();
-// Status changes to ACTIVE, nextInvoiceDate recalculated
-```
-
-#### `complete()`
-**Purpose**: Complete template (stops all future generation)  
-**Returns**: `void`  
-**Side Effects**:
-- Updates `status` to COMPLETED
-- Sets `endDate` to current date
-- Clears `nextInvoiceDate` (sets to null)
-- Logs to activity feed
-
-**Business Rules**:
-- Can only complete if status is ACTIVE or PAUSED
-- Cannot reactivate (COMPLETED is terminal state)
-
-**Example**:
-```java
-template.complete();
-// Status changes to COMPLETED, endDate set, nextInvoiceDate cleared
-```
-
-#### `calculateNextDate()`
-**Purpose**: Calculate next invoice generation date based on frequency  
-**Returns**: `LocalDate` - Next invoice date  
-**Business Rules**:
-- MONTHLY: Add 1 month to current nextInvoiceDate
-- QUARTERLY: Add 3 months to current nextInvoiceDate
-- ANNUALLY: Add 1 year to current nextInvoiceDate
-- If endDate exists and nextInvoiceDate > endDate, return null (template completed)
-
-**Example**:
-```java
-LocalDate nextDate = template.calculateNextDate();
-// Returns next invoice generation date
-```
-
-### 4.4 Invariants
-
-1. **At Least One Line Item**: Template must have at least 1 template line item
-2. **Date Consistency**: `endDate >= startDate` (if endDate is not null)
-3. **Next Date Consistency**: `nextInvoiceDate >= startDate`
-4. **Cannot Generate if Paused**: Cannot generate invoice if status is PAUSED or COMPLETED
-
-### 4.5 Domain Events
-
-| Event | Published By | Payload | Consumers |
-|-------|--------------|---------|-----------|
-| `RecurringInvoiceGeneratedEvent` | `generateInvoice()` | `templateId`, `invoiceId`, `invoiceNumber`, `customerId`, `nextInvoiceDate` | Email listener (sends invoice email if autoSend), Dashboard cache listener, Activity feed listener |
-
-### 4.6 Aggregate Boundaries
-
-**RecurringInvoiceTemplate Aggregate Root**:
-- Owns: RecurringInvoiceTemplate entity (self), TemplateLineItem entities (child entities)
-- References: Customer aggregate (via customerId UUID)
-- Relationships:
-  - Many-to-One with Customer (reference only, Customer is separate aggregate)
-  - Generates Invoice entities (separate aggregate, created via generateInvoice())
-
-**Consistency Boundary**:
-- Template aggregate ensures template consistency
-- Template line items are part of template aggregate (deleted when template deleted)
-- Generated invoices are separate aggregates (created via generateInvoice())
-
----
-
-## 5. Value Objects
-
-### 5.1 Money Value Object
+### 4.1 Money Value Object
 
 **Purpose**: Immutable monetary value with currency and precision  
 **Properties**:
@@ -681,7 +517,7 @@ Money tax = price.multiply(BigDecimal.valueOf(0.0825)); // 8.25% tax
 Money total = price.add(tax); // $108.79 (rounded)
 ```
 
-### 5.2 Email Value Object
+### 4.2 Email Value Object
 
 **Purpose**: Immutable email address with validation  
 **Properties**:
@@ -704,7 +540,7 @@ Email email = Email.of("customer@example.com");
 // Validates format, throws exception if invalid
 ```
 
-### 5.3 InvoiceNumber Value Object
+### 4.3 InvoiceNumber Value Object
 
 **Purpose**: Immutable invoice number with format validation  
 **Properties**:
@@ -726,7 +562,7 @@ InvoiceNumber number = InvoiceNumber.generate(1); // INV-2025-0001
 InvoiceNumber parsed = InvoiceNumber.of("INV-2025-0001");
 ```
 
-### 5.4 Address Value Object
+### 4.4 Address Value Object
 
 **Purpose**: Immutable address with validation  
 **Properties**:
@@ -759,9 +595,9 @@ Address address = Address.builder()
 
 ---
 
-## 6. Aggregate Relationships
+## 5. Aggregate Relationships
 
-### 6.1 Relationship Diagram
+### 5.1 Relationship Diagram
 
 ```
 Customer (Aggregate Root)
@@ -769,15 +605,12 @@ Customer (Aggregate Root)
     ├───< Invoices (Aggregate Root) ────< LineItems (Entity within Invoice)
     │                    │
     │                    └───< Payments (Aggregate Root)
-    │
-    └───< RecurringInvoiceTemplates (Aggregate Root) ────< TemplateLineItems (Entity within Template)
 ```
 
-### 6.2 Consistency Patterns
+### 5.2 Consistency Patterns
 
 **Immediate Consistency** (within aggregate):
 - Invoice aggregate: Line items updated immediately when added/removed
-- Template aggregate: Template line items updated immediately when added/removed
 
 **Eventual Consistency** (cross-aggregate):
 - Payment → Invoice: Payment updates invoice balance via `recordPayment()` method call (immediate)
@@ -791,9 +624,9 @@ Customer (Aggregate Root)
 
 ---
 
-## 7. Design Decisions
+## 6. Design Decisions
 
-### 7.1 Why Rich Domain Models?
+### 6.1 Why Rich Domain Models?
 
 **Decision**: Use rich domain models with behavior methods instead of anemic data models  
 **Rationale**:
@@ -802,16 +635,16 @@ Customer (Aggregate Root)
 - Domain events published by aggregates (not by services)
 - Easier to test (business logic in domain objects)
 
-### 7.2 Why Separate Aggregates?
+### 6.2 Why Separate Aggregates?
 
-**Decision**: Customer, Invoice, Payment, and RecurringInvoiceTemplate are separate aggregates  
+**Decision**: Customer, Invoice, and Payment are separate aggregates  
 **Rationale**:
 - Each aggregate has its own consistency boundary
 - Aggregates can be modified independently (better scalability)
 - Cross-aggregate consistency handled via domain events (eventual consistency)
 - Follows DDD best practices (aggregate boundaries)
 
-### 7.3 Why Value Objects?
+### 6.3 Why Value Objects?
 
 **Decision**: Use value objects (Money, Email, InvoiceNumber, Address) instead of primitives  
 **Rationale**:
@@ -820,7 +653,7 @@ Customer (Aggregate Root)
 - Immutability (prevents accidental modification)
 - Business logic encapsulated (Money calculations, rounding)
 
-### 7.4 Why Domain Events?
+### 6.4 Why Domain Events?
 
 **Decision**: Use domain events for cross-aggregate side effects  
 **Rationale**:
@@ -831,9 +664,9 @@ Customer (Aggregate Root)
 
 ---
 
-## 8. Implementation Notes
+## 7. Implementation Notes
 
-### 8.1 Money Rounding
+### 7.1 Money Rounding
 
 **Strategy**: Banker's rounding (HALF_UP) to 2 decimal places  
 **Implementation**:
@@ -848,7 +681,7 @@ amount = amount.setScale(2, RoundingMode.HALF_UP); // 100.13
 - Payment amounts
 - Credit balances
 
-### 8.2 Optimistic Locking
+### 7.2 Optimistic Locking
 
 **Strategy**: Version field on Invoice aggregate  
 **Implementation**:
@@ -856,7 +689,7 @@ amount = amount.setScale(2, RoundingMode.HALF_UP); // 100.13
 - JPA `@Version` annotation for automatic version management
 - Prevents concurrent modification conflicts
 
-### 8.3 Domain Event Publishing
+### 7.3 Domain Event Publishing
 
 **Pattern**: `@TransactionalEventListener(AFTER_COMMIT)`  
 **Implementation**:
