@@ -107,6 +107,7 @@ export default function EditInvoicePage() {
   const paymentTerms = watch('paymentTerms');
   const issueDate = watch('issueDate');
   const lineItems = watch('lineItems');
+  const customerId = watch('customerId');
 
   // Populate form with existing invoice data
   useEffect(() => {
@@ -259,7 +260,7 @@ export default function EditInvoicePage() {
                 <div>
                   <Label htmlFor="customerId">Customer *</Label>
                   <Select
-                    value={watch('customerId') || undefined}
+                    value={customerId}
                     onValueChange={(value) => setValue('customerId', value)}
                   >
                     <SelectTrigger className="mt-1">
