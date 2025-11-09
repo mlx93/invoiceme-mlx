@@ -16,9 +16,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { useCustomer, useDeleteCustomer } from '@/hooks/useCustomers';
+import { useCustomer, useDeleteCustomer, useReactivateCustomer } from '@/hooks/useCustomers';
 import { useAuth } from '@/contexts/AuthContext';
-import { canEditCustomer, canDeleteCustomer } from '@/lib/rbac';
+import { canEditCustomer, canDeleteCustomer, canReactivateCustomer } from '@/lib/rbac';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
 export default function CustomerDetailPage() {
@@ -28,7 +28,9 @@ export default function CustomerDetailPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { customer, loading, error } = useCustomer(customerId);
   const { deleteCustomer, loading: deleting } = useDeleteCustomer();
+  const { reactivateCustomer, loading: reactivating } = useReactivateCustomer();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reactivateDialogOpen, setReactivateDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -40,6 +42,16 @@ export default function CustomerDetailPage() {
     try {
       await deleteCustomer(customerId);
       router.push('/customers');
+    } catch (err) {
+      // Error handled by hook
+    }
+  };
+
+  const handleReactivate = async () => {
+    try {
+      await reactivateCustomer(customerId);
+      setReactivateDialogOpen(false);
+      window.location.reload(); // Reload to show updated status
     } catch (err) {
       // Error handled by hook
     }
@@ -82,12 +94,12 @@ export default function CustomerDetailPage() {
             <p className="text-gray-500 mt-1">{customer.email}</p>
           </div>
           <div className="flex gap-2">
-            {user && canEditCustomer(user.role) && (
+            {user && canEditCustomer(user.role) && customer.status === 'ACTIVE' && (
               <Link href={`/customers/${customer.id}/edit`}>
                 <Button variant="outline">Edit</Button>
               </Link>
             )}
-            {user && canDeleteCustomer(user.role) && (
+            {user && canDeleteCustomer(user.role) && customer.status === 'ACTIVE' && (
               <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="destructive">Delete</Button>
@@ -106,6 +118,29 @@ export default function CustomerDetailPage() {
                     </Button>
                     <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
                       {deleting ? 'Deleting...' : 'Delete'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+            {user && canReactivateCustomer(user.role) && customer.status === 'INACTIVE' && (
+              <Dialog open={reactivateDialogOpen} onOpenChange={setReactivateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="default">Reactivate</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Reactivate Customer</DialogTitle>
+                    <DialogDescription>
+                      Are you sure you want to reactivate {customer.companyName}? This will allow them to receive new invoices and access the system.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setReactivateDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleReactivate} disabled={reactivating}>
+                      {reactivating ? 'Reactivating...' : 'Reactivate'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>

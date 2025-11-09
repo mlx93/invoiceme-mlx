@@ -63,19 +63,24 @@ export default function CreateCustomerPage() {
 
   const onSubmit = async (data: CustomerFormData) => {
     try {
+      // Only include address if at least one field is filled
+      const hasAddress = data.street || data.city || data.state || data.zipCode || data.country;
+      
       const customer = await createCustomer({
         companyName: data.companyName,
         contactName: data.contactName,
         email: data.email,
         phone: data.phone,
         customerType: data.customerType,
-        address: {
-          street: data.street,
-          city: data.city,
-          state: data.state,
-          zipCode: data.zipCode,
-          country: data.country,
-        },
+        ...(hasAddress && {
+          address: {
+            street: data.street,
+            city: data.city,
+            state: data.state,
+            zipCode: data.zipCode,
+            country: data.country,
+          },
+        }),
       });
       router.push(`/customers/${customer.id}`);
     } catch (err) {

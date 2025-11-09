@@ -1,6 +1,8 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+// Use relative path and let Next.js rewrites proxy to the backend origin.
+// This avoids browser mixed-content issues (HTTPS page calling HTTP API).
+const API_BASE_PATH = '/api/v1';
 
 // RFC 7807 Problem Details format
 export interface ProblemDetail {
@@ -28,7 +30,7 @@ export interface Page<T> {
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_BASE_PATH,
   headers: {
     'Content-Type': 'application/json',
   },

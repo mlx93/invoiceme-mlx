@@ -16,9 +16,11 @@ import java.util.UUID;
 @Repository
 public interface CustomerRepository extends JpaRepository<Customer, UUID>, CustomerRepositoryCustom {
     
-    Optional<Customer> findByEmail(String email);
+    @Query("SELECT c FROM Customer c WHERE c.email.value = :email")
+    Optional<Customer> findByEmail(@Param("email") String email);
     
-    boolean existsByEmail(String email);
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM Customer c WHERE c.email.value = :email")
+    boolean existsByEmail(@Param("email") String email);
     
     Page<Customer> findByStatus(CustomerStatus status, Pageable pageable);
     

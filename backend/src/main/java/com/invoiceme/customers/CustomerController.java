@@ -5,10 +5,13 @@ import com.invoiceme.customers.deletecustomer.DeleteCustomerCommand;
 import com.invoiceme.customers.deletecustomer.DeleteCustomerHandler;
 import com.invoiceme.customers.getcustomer.*;
 import com.invoiceme.customers.listcustomers.*;
+import com.invoiceme.customers.reactivatecustomer.ReactivateCustomerCommand;
+import com.invoiceme.customers.reactivatecustomer.ReactivateCustomerHandler;
 import com.invoiceme.customers.shared.CustomerDto;
 import com.invoiceme.customers.updatecustomer.*;
 import com.invoiceme.domain.common.CustomerStatus;
 import com.invoiceme.domain.common.CustomerType;
+import com.invoiceme.domain.customer.Customer;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -42,6 +45,9 @@ public class CustomerController {
     
     // Delete Customer
     private final DeleteCustomerHandler deleteHandler;
+    
+    // Reactivate Customer
+    private final ReactivateCustomerHandler reactivateHandler;
     
     @PostMapping
     @PreAuthorize("hasAnyRole('SYSADMIN', 'ACCOUNTANT', 'SALES')")
@@ -151,6 +157,28 @@ public class CustomerController {
         DeleteCustomerCommand command = new DeleteCustomerCommand(id);
         deleteHandler.handle(command);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+    
+    @PostMapping("/{id}/reactivate")
+    @PreAuthorize("hasRole('SYSADMIN')")
+    public ResponseEntity<CustomerDto> reactivateCustomer(@PathVariable UUID id) {
+        ReactivateCustomerCommand command = new ReactivateCustomerCommand(id);
+        Customer customer = reactivateHandler.handle(command);
+        
+        CustomerDto response = new CustomerDto();
+        response.setId(customer.getId());
+        response.setCompanyName(customer.getCompanyName());
+        response.setContactName(customer.getContactName());
+        response.setEmail(customer.getEmail().getValue());
+        response.setPhone(customer.getPhone());
+        response.setAddress(customer.getAddress());
+        response.setCustomerType(customer.getCustomerType());
+        response.setCreditBalance(customer.getCreditBalance());
+        response.setStatus(customer.getStatus());
+        response.setCreatedAt(customer.getCreatedAt());
+        response.setUpdatedAt(customer.getUpdatedAt());
+        
+        return ResponseEntity.ok(response);
     }
 }
 

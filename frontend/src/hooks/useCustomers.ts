@@ -152,3 +152,24 @@ export function useDeleteCustomer() {
   return { deleteCustomer, loading, error };
 }
 
+export function useReactivateCustomer() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const reactivateCustomer = async (id: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.post<CustomerResponse>(`/customers/${id}/reactivate`);
+      return response.data;
+    } catch (err) {
+      setError(getErrorMessage(err));
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { reactivateCustomer, loading, error };
+}
+

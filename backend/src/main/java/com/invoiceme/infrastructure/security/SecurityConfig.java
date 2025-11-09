@@ -45,11 +45,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Allow both development and production frontend origins
-        configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:3000",  // Development
-            "http://invoiceme-mlx-env.eba-dpfprff7.us-east-1.elasticbeanstalk.com",  // Production HTTP
-            "https://invoiceme-mlx-env.eba-dpfprff7.us-east-1.elasticbeanstalk.com"   // Production HTTPS (if available)
+        // Allow development and common production frontend origins (Vercel and EB)
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+            "http://localhost:3000",
+            "https://*.vercel.app",
+            "http://*.elasticbeanstalk.com",
+            "https://*.elasticbeanstalk.com"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));

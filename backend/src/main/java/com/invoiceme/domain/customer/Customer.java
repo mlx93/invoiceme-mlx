@@ -159,6 +159,14 @@ public class Customer extends AggregateRoot {
         ));
     }
     
+    public void markAsActive() {
+        if (this.status == CustomerStatus.ACTIVE) {
+            throw new IllegalStateException("Customer is already active");
+        }
+        
+        this.status = CustomerStatus.ACTIVE;
+    }
+    
     public void update(String companyName, String contactName, String phone, Address address, CustomerType customerType) {
         if (companyName != null && !companyName.trim().isEmpty()) {
             this.companyName = companyName;

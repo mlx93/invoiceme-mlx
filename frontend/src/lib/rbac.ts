@@ -5,10 +5,18 @@ export function canCreateCustomer(role: UserRole): boolean {
 }
 
 export function canEditCustomer(role: UserRole): boolean {
-  return ['SYSADMIN', 'ACCOUNTANT'].includes(role);
+  return ['SYSADMIN', 'ACCOUNTANT', 'SALES'].includes(role);
+}
+
+export function canUpdateCustomer(role: UserRole): boolean {
+  return canEditCustomer(role);
 }
 
 export function canDeleteCustomer(role: UserRole): boolean {
+  return role === 'SYSADMIN';
+}
+
+export function canReactivateCustomer(role: UserRole): boolean {
   return role === 'SYSADMIN';
 }
 
