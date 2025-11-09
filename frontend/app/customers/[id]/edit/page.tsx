@@ -168,7 +168,7 @@ export default function EditCustomerPage() {
             <div>
               <Label htmlFor="customerType">Customer Type *</Label>
               <Select
-                value={customerType}
+                value={customerType || 'COMMERCIAL'}
                 onValueChange={(value) => setValue('customerType', value as CustomerType)}
               >
                 <SelectTrigger className="mt-1">
