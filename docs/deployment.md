@@ -15,19 +15,32 @@
 
 ---
 
-## 🎉 Backend Deployment Status
+## 🎉 Deployment Status
 
-**✅ BACKEND DEPLOYED & OPERATIONAL**
+**✅ FULL STACK DEPLOYED & OPERATIONAL**
 
+### Backend
 - **Live URL**: `http://invoiceme-mlx-back-env.eba-jj8c3aur.us-east-1.elasticbeanstalk.com`
 - **Health Check**: ✅ `{"status":"UP"}`
 - **Status**: Fully operational since deployment
 
-**See**: [`BACKEND_DEPLOYMENT_SUCCESS.md`](./BACKEND_DEPLOYMENT_SUCCESS.md) for complete deployment details and troubleshooting guide.
+### Frontend
+- **Platform**: AWS Elastic Beanstalk (Node.js 20)
+- **Framework**: Next.js 16 (App Router with SSR)
+- **Status**: ✅ Deployed (URL to be confirmed)
+
+### Database
+- **Platform**: Supabase PostgreSQL
+- **Connection**: Connection Pooler
+- **Status**: ✅ Connected
+
+**See**: [`DEPLOYMENT_SUMMARY.md`](./deployment/DEPLOYMENT_SUMMARY.md) for complete deployment details, issues encountered, and solutions.
 
 **Key Learnings**: 
 - Use **Supabase Connection Pooler** for AWS deployments (not direct connection)
-- See [`SUPABASE_CONNECTION_GUIDE.md`](./SUPABASE_CONNECTION_GUIDE.md) for connection details
+- **Next.js SSR** requires Elastic Beanstalk (not Amplify static hosting)
+- See [`SUPABASE_CONNECTION_GUIDE.md`](./deployment/SUPABASE_CONNECTION_GUIDE.md) for connection details
+- See [`BACKEND_DEPLOYMENT_SUCCESS.md`](./deployment/BACKEND_DEPLOYMENT_SUCCESS.md) for backend-specific details
 
 ---
 

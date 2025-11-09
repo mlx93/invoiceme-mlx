@@ -45,7 +45,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+        // Allow both development and production frontend origins
+        configuration.setAllowedOrigins(Arrays.asList(
+            "http://localhost:3000",  // Development
+            "http://invoiceme-mlx-env.eba-dpfprff7.us-east-1.elasticbeanstalk.com",  // Production HTTP
+            "https://invoiceme-mlx-env.eba-dpfprff7.us-east-1.elasticbeanstalk.com"   // Production HTTPS (if available)
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

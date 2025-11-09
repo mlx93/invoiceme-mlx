@@ -1,0 +1,12 @@
+{
+  "name": "invoiceme-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "next start -p 8080",
+    "build": "next build"
+  },
+  "engines": {
+    "node": "20.x"
+  }
+}
+
