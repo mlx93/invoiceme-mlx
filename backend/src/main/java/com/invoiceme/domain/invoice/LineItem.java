@@ -90,8 +90,11 @@ public class LineItem {
             discountAmount = baseAmount.multiply(discountPercent);
         } else if (discountType == DiscountType.FIXED) {
             discountAmount = discountValue;
-            if (discountAmount.isGreaterThan(baseAmount)) {
-                discountAmount = baseAmount; // Cap discount at base amount
+            // Allow discount to exceed base amount for credit line items (negative line totals)
+            // Credit line items have description "Account Credit Applied" and discount = unit_price
+            if (discountAmount.isGreaterThan(baseAmount) && 
+                !"Account Credit Applied".equals(description)) {
+                discountAmount = baseAmount; // Cap discount at base amount (except for credits)
             }
         } else {
             discountAmount = Money.zero();
