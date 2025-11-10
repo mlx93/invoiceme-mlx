@@ -208,24 +208,43 @@ public class Invoice extends AggregateRoot {
             throw new IllegalStateException("Cannot mark invoice as sent without line items");
         }
         
-        this.status = InvoiceStatus.SENT;
-        this.sentDate = Instant.now();
-        
-        // Note: Credit auto-application would be handled by command handler
-        // This method publishes the event, and the handler checks customer credit
-        
-        addDomainEvent(new InvoiceSentEvent(
-            this.id,
-            this.invoiceNumber.toString(),
-            this.customerId,
-            null, // customerName - will be set by handler
-            null, // customerEmail - will be set by handler
-            this.totalAmount,
-            this.dueDate,
-            this.issueDate,
-            this.lineItems.size(),
-            Money.zero() // creditApplied - will be set by handler if credit applied
-        ));
+        // If balance is zero (e.g., after credit application), mark as PAID instead of SENT
+        if (this.balanceDue.isZero() || this.balanceDue.isNegative()) {
+            this.status = InvoiceStatus.PAID;
+            this.sentDate = Instant.now();
+            this.paidDate = Instant.now();
+            this.balanceDue = Money.zero(); // Ensure non-negative
+            
+            // Publish InvoiceFullyPaidEvent instead of InvoiceSentEvent
+            addDomainEvent(new InvoiceFullyPaidEvent(
+                this.id,
+                this.invoiceNumber.toString(),
+                this.customerId,
+                null, // customerName - will be set by handler
+                this.totalAmount,
+                this.paidDate,
+                0 // paymentCount - credit application, no actual payment
+            ));
+        } else {
+            this.status = InvoiceStatus.SENT;
+            this.sentDate = Instant.now();
+            
+            // Note: Credit auto-application would be handled by command handler
+            // This method publishes the event, and the handler checks customer credit
+            
+            addDomainEvent(new InvoiceSentEvent(
+                this.id,
+                this.invoiceNumber.toString(),
+                this.customerId,
+                null, // customerName - will be set by handler
+                null, // customerEmail - will be set by handler
+                this.totalAmount,
+                this.dueDate,
+                this.issueDate,
+                this.lineItems.size(),
+                Money.zero() // creditApplied - will be set by handler if credit applied
+            ));
+        }
     }
     
     public void recordPayment(Money amount) {
@@ -428,8 +447,11 @@ public class Invoice extends AggregateRoot {
                 itemDiscount = baseAmount.multiply(discountPercent);
             } else if (item.getDiscountType() == DiscountType.FIXED) {
                 itemDiscount = item.getDiscountValue();
-                if (itemDiscount.isGreaterThan(baseAmount)) {
-                    itemDiscount = baseAmount;
+                // Allow discount to exceed base amount for credit line items (negative line totals)
+                // Credit line items have description "Account Credit Applied" and discount = credit amount
+                if (itemDiscount.isGreaterThan(baseAmount) && 
+                    !"Account Credit Applied".equals(item.getDescription())) {
+                    itemDiscount = baseAmount; // Cap discount at base amount (except for credits)
                 }
             } else {
                 itemDiscount = Money.zero();
